@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#D84336" />
 <title>くまねー</title>
 <style>
-  /* くまねー v0.1
+  /* くまねー v0.2
      配色は家族ルック：背景は白、カードは「くまカラー」#f0dcbc、文字 #3a352d、アクセント #d84336。
      ダークモード対策（恒常ルール）：自分の背景を持つ要素は背景色と文字色を固定値でセット指定し、
      prefers-color-scheme: dark でも同じ値を再指定して反転させない。 */
@@ -228,6 +228,30 @@
   .row-flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .mt8{margin-top:8px}.mt12{margin-top:12px}
   .switch-line{display:flex;align-items:center;gap:10px;font-size:14.5px}
+
+  /* v0.2 通貨まわり（固定色ペアで指定） */
+  .total-block + .total-block{margin-top:14px}
+  .per-group{display:flex;align-items:center;gap:8px;margin-top:10px}
+  .per-group .per-cur{font-weight:800;font-size:16px;min-width:18px;text-align:center;color:#3A352D}
+  .per-group .periods{flex:1;margin-top:0}
+  .band-cur{font-weight:800;font-size:14px;color:#3A352D;margin:10px 0 5px}
+  .band-cur:first-child{margin-top:0}
+  .tile .tval{font-weight:800;font-size:14px;color:#FFFFFF}
+  .cur-head{font-weight:800;font-size:14.5px;color:#3A352D;margin:14px 0 2px}
+  .seg{display:inline-flex;background:#FFFFFF;border:1.6px solid #C9B98F;border-radius:999px;overflow:hidden}
+  .seg button{border:0;background:#FFFFFF;color:#3A352D;padding:7px 24px;font-weight:700;font-size:14px}
+  .seg button.on{background:#D84336;color:#FFFFFF}
+  .merge-hint{font-size:12.5px;font-weight:700;color:#B71C1C}
+  @media (prefers-color-scheme: dark){
+    .per-group .per-cur{ color:#3A352D; }
+    .band-cur{ color:#3A352D; }
+    .tile .tval{ color:#FFFFFF; }
+    .cur-head{ color:#3A352D; }
+    .seg{ background:#FFFFFF; border-color:#C9B98F; }
+    .seg button{ background:#FFFFFF; color:#3A352D; }
+    .seg button.on{ background:#D84336; color:#FFFFFF; }
+    .merge-hint{ color:#B71C1C; }
+  }
 </style>
 </head>
 <body>
@@ -235,7 +259,7 @@
 
   <header class="top">
     <h1>くまねー<span class="bear-c" role="img" aria-label="くまま"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.8" cy="5.4" r="2.7" fill="currentColor"/><circle cx="17.2" cy="5.4" r="2.7" fill="currentColor"/><path d="M12 20.8c-4.3 0-7-2.6-7-6.2C5 10.7 8.1 7.5 12 7.5s7 3.2 7 7.1c0 3.6-2.7 6.2-7 6.2Z" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><circle cx="9.4" cy="13.3" r="1.1" fill="currentColor"/><circle cx="14.6" cy="13.3" r="1.1" fill="currentColor"/><path d="M10.1 16.2c.6.5 1.2.8 1.9.8s1.3-.3 1.9-.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span></h1>
-    <span class="ver">v0.1</span>
+    <span class="ver">v0.2</span>
   </header>
 
   <!-- モード帯：本番とお試しは別データ。色とバッジで常に区別する -->
@@ -258,27 +282,15 @@
   <!-- ホーム -->
   <section id="tab-home">
     <div class="card">
-      <div class="total-label">総評価額</div>
-      <div class="total-num" id="totalValue">¥0</div>
-      <div class="mt8">
-        <span class="total-label">含み損益 </span>
-        <span class="pnl flat" id="totalPnl">±¥0（±0.0%）</span>
-      </div>
+      <div id="totalBlocks"></div>
       <div class="trial-capital hidden" id="capitalLine"></div>
-      <div class="periods">
-        <div class="per"><div class="plabel">週</div><div class="pval pnl flat" id="perWeek">—</div></div>
-        <div class="per"><div class="plabel">月</div><div class="pval pnl flat" id="perMonth">—</div></div>
-        <div class="per"><div class="plabel">年</div><div class="pval pnl flat" id="perYear">—</div></div>
-      </div>
+      <div id="periodArea"></div>
       <div class="sub mt8" id="snapNote"></div>
     </div>
 
     <div class="card">
       <h2>種類の割合</h2>
-      <div id="bandArea">
-        <div class="band" id="bandBar"></div>
-        <div class="legend" id="bandLegend"></div>
-      </div>
+      <div id="bandArea"></div>
       <div class="empty-note hidden" id="bandEmpty">まだ保有がありません。「保有」から追加してください。</div>
     </div>
 
@@ -313,7 +325,16 @@
         <div class="form-grid">
           <div class="full">
             <label for="fName">名前</label>
-            <input type="text" id="fName" placeholder="例：トヨタ自動車／eMAXIS Slim 全世界株式" autocomplete="off" />
+            <input type="text" id="fName" placeholder="例：トヨタ自動車／eMAXIS Slim 全世界株式" autocomplete="off" list="nameList" />
+            <datalist id="nameList"></datalist>
+          </div>
+          <div class="full merge-hint hidden" id="mergeHint">買い増しとして合算されます（買値は平均になります）</div>
+          <div class="full">
+            <label>通貨</label>
+            <div class="seg" id="fCurSeg" role="group" aria-label="通貨">
+              <button type="button" data-cur="JPY" class="on">円</button>
+              <button type="button" data-cur="USD">ドル</button>
+            </div>
           </div>
           <div>
             <label for="fType">種類</label>
@@ -324,11 +345,11 @@
             <input type="number" id="fQty" inputmode="decimal" min="0" step="any" placeholder="100" />
           </div>
           <div>
-            <label for="fBuy">買値（単価・円）</label>
+            <label for="fBuy" id="fBuyLabel">買値（単価・円）</label>
             <input type="number" id="fBuy" inputmode="decimal" min="0" step="any" placeholder="2000" />
           </div>
           <div>
-            <label for="fCur">現在値（単価・円）</label>
+            <label for="fCur" id="fCurLabel">現在値（単価・円）</label>
             <input type="number" id="fCur" inputmode="decimal" min="0" step="any" placeholder="買値と同じなら空でOK" />
           </div>
           <div class="full">
@@ -406,6 +427,8 @@
       <h2>くまねーについて</h2>
       <p>買った値段と今の値段を記録して、含み損益や資産の推移を眺めるための、小さな記録アプリです。</p>
       <p>・現在値は手入力だけです。株価などを自動で取りに行くことはしません。<br>
+         ・ドル建てはドルで記録します。円への換算はしません。<br>
+         ・同じ名前・種類・通貨の保有を追加すると、買い増しとして合算されます（買値は平均取得単価になります）。<br>
          ・「本番」と「お試し」は記録が完全に分かれています。お試しは、元手を決めて「買ったつもり」で練習できます。<br>
          ・現在値を更新すると、その日の総評価額が記録され、推移グラフと週・月・年の収支に使われます。<br>
          ・記録はこの端末の中だけに保存されます。外部に送信されることはありません。機種変更やブラウザのデータ消去で消えることがあるので、CSVの書き出しがおすすめです。</p>
@@ -424,10 +447,11 @@
 <script>
 "use strict";
 /* ============================================================
-   くまねー v0.1
+   くまねー v0.2
    - データは localStorage のみ（外部送信なし・外部APIなし）
    - 本番（real）とお試し（trial）は別データセットで完全分離
-   - スナップショット：現在値を保存した日の総評価額を日付つきで記録
+   - 通貨は円（JPY）／ドル（USD）。換算はせず、通貨ごとに完結させる
+   - スナップショット：現在値を保存した日の総評価額を通貨別に日付つきで記録
    ============================================================ */
 
 var TYPES = {
@@ -453,6 +477,13 @@ function loadDataset(which) {
     var d = JSON.parse(raw);
     if (!d || !Array.isArray(d.holdings) || !Array.isArray(d.snapshots)) return emptyDataset();
     if (typeof d.capital !== "number") d.capital = 0;
+    /* v0.2 移行：通貨が無い保有は「円」。スナップショットの旧 total は円の値として引き継ぐ
+       （ドルの履歴は無いので usd は未定義のまま＝推移・期間収支のドル計算からは除外される） */
+    d.holdings.forEach(function (h) { if (h.currency !== "USD") h.currency = "JPY"; });
+    d.snapshots.forEach(function (s) {
+      if (typeof s.jpy !== "number") s.jpy = num(s.total);
+      if ("total" in s) delete s.total;
+    });
     return d;
   } catch (e) { return emptyDataset(); }
 }
@@ -495,6 +526,21 @@ function yenSigned(v) {
   if (Math.round(v) === 0) return "±¥0";
   return (v > 0 ? "+" : "−") + "¥" + Math.abs(Math.round(v)).toLocaleString("ja-JP");
 }
+/* ドルは小数第2位まで（例：$1,502.5）。換算はしない */
+function usdNum(v) {
+  return (Math.round(Math.abs(v) * 100) / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function usd(v) {
+  return (v < 0 ? "−" : "") + "$" + usdNum(v);
+}
+function usdSigned(v) {
+  if (Math.round(v * 100) === 0) return "±$0";
+  return (v > 0 ? "+" : "−") + "$" + usdNum(v);
+}
+function curOf(h) { return h && h.currency === "USD" ? "USD" : "JPY"; }
+function money(v, cur) { return cur === "USD" ? usd(v) : yen(v); }
+function moneySigned(v, cur) { return cur === "USD" ? usdSigned(v) : yenSigned(v); }
+function curSymbol(cur) { return cur === "USD" ? "$" : "¥"; }
 function pctSigned(v) {
   if (!isFinite(v)) return "—";
   var r = Math.round(v * 10) / 10;
@@ -540,22 +586,41 @@ function totals(list) {
   list.forEach(function (h) { value += holdingValue(h); cost += holdingCost(h); });
   return { value: value, cost: cost, pnl: value - cost, pnlPct: cost > 0 ? (value - cost) / cost * 100 : null };
 }
+/* 通貨ごとに集計する（円とドルは絶対に合算しない） */
+var CURRENCIES = ["JPY", "USD"];
+function totalsByCurrency(list) {
+  var acc = { JPY: { value: 0, cost: 0, count: 0 }, USD: { value: 0, cost: 0, count: 0 } };
+  list.forEach(function (h) {
+    var a = acc[curOf(h)];
+    a.value += holdingValue(h); a.cost += holdingCost(h); a.count++;
+  });
+  var out = {};
+  CURRENCIES.forEach(function (k) {
+    var a = acc[k];
+    out[k] = { value: a.value, cost: a.cost, count: a.count, pnl: a.value - a.cost, pnlPct: a.cost > 0 ? (a.value - a.cost) / a.cost * 100 : null };
+  });
+  return out;
+}
 
 /* ---------- スナップショット ---------- */
 function recordSnapshot() {
   var d = ds();
-  var total = totals(visibleHoldings()).value;
+  var tc = totalsByCurrency(visibleHoldings());
   var today = todayStr();
   var found = null;
   d.snapshots.forEach(function (s) { if (s.date === today) found = s; });
-  if (found) found.total = total;
-  else d.snapshots.push({ date: today, total: total });
+  if (found) { found.jpy = tc.JPY.value; found.usd = tc.USD.value; }
+  else d.snapshots.push({ date: today, jpy: tc.JPY.value, usd: tc.USD.value });
   d.snapshots.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
 }
-/* 期間収支：最新スナップショットと、days日前以前で直近のスナップショットとの差。
+/* 通貨別の推移系列（その通貨の値が記録されているスナップショットだけ） */
+function snapSeries(key) {
+  return ds().snapshots.filter(function (s) { return typeof s[key] === "number"; });
+}
+/* 期間収支：その通貨の最新スナップショットと、days日前以前で直近のものとの差。
    古い記録が足りない場合は最古のスナップショットを起点にする（部分的な値）。 */
-function periodReturn(days) {
-  var snaps = ds().snapshots;
+function periodReturn(days, key) {
+  var snaps = snapSeries(key);
   if (snaps.length < 2) return null;
   var latest = snaps[snaps.length - 1];
   var t = new Date(latest.date + "T00:00:00");
@@ -567,7 +632,7 @@ function periodReturn(days) {
   }
   if (!base) base = snaps[0];
   if (base === latest) return null;
-  return latest.total - base.total;
+  return latest[key] - base[key];
 }
 
 /* ---------- 描画：モード ---------- */
@@ -586,116 +651,196 @@ function renderMode() {
 /* ---------- 描画：ホーム ---------- */
 function renderHome() {
   var list = visibleHoldings();
-  var t = totals(list);
-  $("totalValue").textContent = yen(t.value);
-  var pnlEl = $("totalPnl");
-  pnlEl.textContent = yenSigned(t.pnl) + "（" + (t.pnlPct == null ? "—" : pctSigned(t.pnlPct)) + "）";
-  pnlEl.className = "pnl " + pnlClass(t.pnl);
+  var tc = totalsByCurrency(list);
 
-  /* お試し：元手との差も見せる */
+  /* 合計は通貨ごとに分けて表示（保有がある通貨だけ。何も無ければ円を ¥0 で出す） */
+  var blocks = $("totalBlocks");
+  blocks.innerHTML = "";
+  var shownCur = CURRENCIES.filter(function (c) { return tc[c].count > 0; });
+  if (!shownCur.length) shownCur = ["JPY"];
+  shownCur.forEach(function (cur) {
+    var t = tc[cur];
+    var block = document.createElement("div");
+    block.className = "total-block";
+    block.innerHTML =
+      "<div class='total-label'>総評価額 " + curSymbol(cur) + "</div>" +
+      "<div class='total-num'>" + money(t.value, cur) + "</div>" +
+      "<div class='mt8'><span class='total-label'>含み損益 </span>" +
+      "<span class='pnl " + pnlClass(t.pnl) + "'>" + moneySigned(t.pnl, cur) + "（" + (t.pnlPct == null ? "—" : pctSigned(t.pnlPct)) + "）</span></div>";
+    blocks.appendChild(block);
+  });
+
+  /* お試し：元手との差も見せる（元手は円なので、円の合計とだけ比べる） */
   if (state.mode === "trial") {
     var cap = num(ds().capital);
     if (cap > 0) {
-      var diff = t.value - cap;
-      $("capitalLine").innerHTML = "元手 " + yen(cap) + " → いま <span class='pnl " + pnlClass(diff) + "'>" + yenSigned(diff) + "</span>";
+      var diff = tc.JPY.value - cap;
+      $("capitalLine").innerHTML = "元手 " + yen(cap) + " → いま（円） <span class='pnl " + pnlClass(diff) + "'>" + yenSigned(diff) + "</span>";
     } else {
       $("capitalLine").textContent = "元手は「保有」タブで設定できます";
     }
   }
 
-  /* 週・月・年（スナップショットから） */
-  var defs = [["perWeek", 7], ["perMonth", 30], ["perYear", 365]];
-  defs.forEach(function (pair) {
-    var el = $(pair[0]);
-    var r = periodReturn(pair[1]);
-    if (r == null) { el.textContent = "—"; el.className = "pval pnl flat"; }
-    else { el.textContent = yenSigned(r); el.className = "pval pnl " + pnlClass(r); }
+  /* 週・月・年（スナップショットから、通貨ごと） */
+  var pa = $("periodArea");
+  pa.innerHTML = "";
+  var perCur = CURRENCIES.filter(function (c) { return tc[c].count > 0 || snapSeries(c === "JPY" ? "jpy" : "usd").length > 0; });
+  if (!perCur.length) perCur = ["JPY"];
+  var defs = [["週", 7], ["月", 30], ["年", 365]];
+  perCur.forEach(function (cur) {
+    var key = cur === "JPY" ? "jpy" : "usd";
+    var group = document.createElement("div");
+    group.className = "per-group";
+    var html = "<div class='per-cur'>" + curSymbol(cur) + "</div><div class='periods'>";
+    defs.forEach(function (pair) {
+      var r = periodReturn(pair[1], key);
+      if (r == null) html += "<div class='per'><div class='plabel'>" + pair[0] + "</div><div class='pval pnl flat'>—</div></div>";
+      else html += "<div class='per'><div class='plabel'>" + pair[0] + "</div><div class='pval pnl " + pnlClass(r) + "'>" + moneySigned(r, cur) + "</div></div>";
+    });
+    html += "</div>";
+    group.innerHTML = html;
+    pa.appendChild(group);
   });
   var snaps = ds().snapshots;
   $("snapNote").textContent = snaps.length
     ? "推移の記録：" + snaps.length + "日分（直近 " + snaps[snaps.length - 1].date + "）"
     : "推移の記録はまだありません";
 
-  /* 横帯グラフ */
-  var byType = {};
-  TYPE_ORDER.forEach(function (k) { byType[k] = 0; });
-  list.forEach(function (h) { byType[h.type] += holdingValue(h); });
-  var band = $("bandBar"), legend = $("bandLegend");
-  band.innerHTML = ""; legend.innerHTML = "";
-  var has = t.value > 0;
-  $("bandArea").classList.toggle("hidden", !has);
-  $("bandEmpty").classList.toggle("hidden", has);
-  if (has) {
+  renderBand(list, tc);
+  renderChart();
+  renderTiles(list, tc);
+}
+
+/* 横帯グラフ：通貨ごとに1本（割合はその通貨の中での割合） */
+function renderBand(list, tc) {
+  var area = $("bandArea");
+  area.innerHTML = "";
+  var any = false;
+  CURRENCIES.forEach(function (cur) {
+    var total = tc[cur].value;
+    if (total <= 0) return;
+    any = true;
+    var byType = {};
+    TYPE_ORDER.forEach(function (k) { byType[k] = 0; });
+    list.forEach(function (h) { if (curOf(h) === cur) byType[h.type] += holdingValue(h); });
+    var label = document.createElement("div");
+    label.className = "band-cur";
+    label.textContent = curSymbol(cur);
+    area.appendChild(label);
+    var band = document.createElement("div");
+    band.className = "band";
+    var legend = document.createElement("div");
+    legend.className = "legend";
     TYPE_ORDER.forEach(function (k) {
       var v = byType[k];
       if (v <= 0) return;
       var seg = document.createElement("div");
-      seg.style.width = (v / t.value * 100) + "%";
+      seg.style.width = (v / total * 100) + "%";
       seg.style.background = TYPES[k].color;
       band.appendChild(seg);
       var item = document.createElement("span");
-      var pct = Math.round(v / t.value * 1000) / 10;
+      var pct = Math.round(v / total * 1000) / 10;
       item.innerHTML = "<span class='dot' style='background:" + TYPES[k].color + "'></span>" + TYPES[k].label + " " + pct + "%";
       legend.appendChild(item);
     });
-  }
+    area.appendChild(band);
+    area.appendChild(legend);
+  });
+  area.classList.toggle("hidden", !any);
+  $("bandEmpty").classList.toggle("hidden", any);
+}
 
-  renderChart();
-
-  /* タイル：大きさ＝評価額（flex-grow に評価額比を使う） */
+/* タイル：大きさ＝評価額（同じ通貨の中での比）、金額はその銘柄の通貨で表示 */
+function renderTiles(list, tc) {
   var tiles = $("tiles");
   tiles.innerHTML = "";
-  var sorted = list.slice().sort(function (a, b) { return holdingValue(b) - holdingValue(a); });
-  $("tilesEmpty").classList.toggle("hidden", sorted.length > 0);
-  sorted.forEach(function (h) {
-    var tile = document.createElement("div");
-    tile.className = "tile";
-    tile.style.background = TYPES[h.type] ? TYPES[h.type].color : "#8D6E63";
-    tile.style.flexGrow = String(Math.max(1, Math.round(holdingValue(h) / Math.max(1, t.value) * 100)));
-    tile.style.flexBasis = "104px";
-    var p = holdingPnlPct(h);
-    var pctTxt = p == null ? "—" : pctSigned(p);
-    var cls = p == null ? "flat" : pnlClass(p);
-    tile.innerHTML = "<div class='tname'>" + esc(h.name) + "</div>" +
-      "<span class='tpct " + cls + "'>" + pctTxt + "</span>";
-    tiles.appendChild(tile);
+  $("tilesEmpty").classList.toggle("hidden", list.length > 0);
+  CURRENCIES.forEach(function (cur) {
+    var group = list.filter(function (h) { return curOf(h) === cur; })
+      .sort(function (a, b) { return holdingValue(b) - holdingValue(a); });
+    var total = Math.max(1, tc[cur].value);
+    group.forEach(function (h) {
+      var tile = document.createElement("div");
+      tile.className = "tile";
+      tile.style.background = TYPES[h.type] ? TYPES[h.type].color : "#8D6E63";
+      tile.style.flexGrow = String(Math.max(1, Math.round(holdingValue(h) / total * 100)));
+      tile.style.flexBasis = "104px";
+      var p = holdingPnlPct(h);
+      var pctTxt = p == null ? "—" : pctSigned(p);
+      var cls = p == null ? "flat" : pnlClass(p);
+      tile.innerHTML = "<div class='tname'>" + esc(h.name) + "</div>" +
+        "<div class='tval'>" + money(holdingValue(h), cur) + "</div>" +
+        "<span class='tpct " + cls + "'>" + pctTxt + "</span>";
+      tiles.appendChild(tile);
+    });
   });
 }
 
-/* 推移グラフ（スナップショットの折れ線） */
+/* 推移グラフ：通貨ごとに線を分ける。円とドルは桁が違うので、縦軸は通貨ごとに正規化する
+   （線は「その通貨の中での上下の形」を表す。凡例は記号＋最大値のみ） */
 function renderChart() {
-  var snaps = ds().snapshots;
   var box = $("chartBox");
-  $("chartEmpty").classList.toggle("hidden", snaps.length > 0);
-  box.classList.toggle("hidden", snaps.length === 0);
-  if (!snaps.length) { box.innerHTML = ""; return; }
+  var series = [
+    { key: "jpy", cur: "JPY", color: "#D84336", pts: snapSeries("jpy") },
+    { key: "usd", cur: "USD", color: "#1565C0", pts: snapSeries("usd") }
+  ].filter(function (s) { return s.pts.length > 0; });
+  $("chartEmpty").classList.toggle("hidden", series.length > 0);
+  box.classList.toggle("hidden", series.length === 0);
+  if (!series.length) { box.innerHTML = ""; return; }
   var W = 640, H = 180, PAD = 8;
-  var vals = snaps.map(function (s) { return s.total; });
-  var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
-  if (min === max) { min -= 1; max += 1; }
-  var x = function (i) { return snaps.length === 1 ? W / 2 : PAD + (W - PAD * 2) * i / (snaps.length - 1); };
-  var y = function (v) { return H - 22 - (H - 40) * (v - min) / (max - min); };
-  var pts = snaps.map(function (s, i) { return x(i).toFixed(1) + "," + y(s.total).toFixed(1); }).join(" ");
-  var dots = snaps.map(function (s, i) {
-    return "<circle cx='" + x(i).toFixed(1) + "' cy='" + y(s.total).toFixed(1) + "' r='3' fill='#D84336'/>";
-  }).join("");
-  box.innerHTML =
-    "<svg viewBox='0 0 " + W + " " + H + "' role='img' aria-label='資産推移グラフ'>" +
-    "<polyline points='" + pts + "' fill='none' stroke='#D84336' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'/>" +
-    dots +
-    "<text x='" + PAD + "' y='14' font-size='11' fill='#6B6151'>" + yen(max) + "</text>" +
-    "<text x='" + PAD + "' y='" + (H - 4) + "' font-size='11' fill='#6B6151'>" + esc(snaps[0].date) + " 〜 " + esc(snaps[snaps.length - 1].date) + "</text>" +
-    "</svg>";
+  var svg = "<svg viewBox='0 0 " + W + " " + H + "' role='img' aria-label='資産推移グラフ'>";
+  series.forEach(function (s, si) {
+    var vals = s.pts.map(function (p) { return p[s.key]; });
+    var rawMax = Math.max.apply(null, vals);
+    var min = Math.min.apply(null, vals), max = rawMax;
+    if (min === max) { min -= 1; max += 1; }
+    var x = function (i) { return s.pts.length === 1 ? W / 2 : PAD + (W - PAD * 2) * i / (s.pts.length - 1); };
+    var y = function (v) { return H - 22 - (H - 56) * (v - min) / (max - min); };
+    var pts = s.pts.map(function (p, i) { return x(i).toFixed(1) + "," + y(p[s.key]).toFixed(1); }).join(" ");
+    var dots = s.pts.map(function (p, i) {
+      return "<circle cx='" + x(i).toFixed(1) + "' cy='" + y(p[s.key]).toFixed(1) + "' r='3' fill='" + s.color + "'/>";
+    }).join("");
+    svg += "<polyline points='" + pts + "' fill='none' stroke='" + s.color + "' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'/>" + dots;
+    svg += "<text x='" + PAD + "' y='" + (14 + si * 15) + "' font-size='11' font-weight='700' fill='" + s.color + "'>" + money(rawMax, s.cur) + "</text>";
+  });
+  var all = ds().snapshots;
+  if (all.length) {
+    svg += "<text x='" + PAD + "' y='" + (H - 4) + "' font-size='11' fill='#6B6151'>" + esc(all[0].date) + " 〜 " + esc(all[all.length - 1].date) + "</text>";
+  }
+  svg += "</svg>";
+  box.innerHTML = svg;
 }
 
 /* ---------- 描画：保有一覧 ---------- */
+/* 銘柄名の候補（このモードの既存の名前、重複なし） */
+function buildNameList() {
+  var dl = $("nameList");
+  dl.innerHTML = "";
+  var seen = {};
+  ds().holdings.forEach(function (h) {
+    if (h.name && !seen[h.name]) {
+      seen[h.name] = true;
+      var o = document.createElement("option");
+      o.value = h.name;
+      dl.appendChild(o);
+    }
+  });
+}
 function renderHoldings() {
   var list = ds().holdings;
   var wrap = $("holdList");
   wrap.innerHTML = "";
   $("holdEmpty").classList.toggle("hidden", list.length > 0);
   $("priceUpdateBtn").disabled = list.length === 0;
-  list.forEach(function (h) {
+  /* 現在値の更新は通貨ごとにグループ分けする */
+  CURRENCIES.forEach(function (cur) {
+    var group = list.filter(function (h) { return curOf(h) === cur; });
+    if (!group.length) return;
+    var head = document.createElement("div");
+    head.className = "cur-head";
+    head.textContent = cur === "USD" ? "ドル建て" : "円建て";
+    wrap.appendChild(head);
+    group.forEach(function (h) {
     var div = document.createElement("div");
     div.className = "hold";
     var p = holdingPnlPct(h);
@@ -705,21 +850,23 @@ function renderHoldings() {
       "<div class='hrow'>" +
         "<span class='hname'>" + esc(h.name) + "</span>" +
         "<span class='type-chip' style='background:" + (TYPES[h.type] ? TYPES[h.type].color : "#8D6E63") + "'>" + (TYPES[h.type] ? TYPES[h.type].label : h.type) + "</span>" +
-        "<span class='hnums'><span class='hval'>" + yen(holdingValue(h)) + "</span><br>" +
-        "<span class='pnl " + (p == null ? "flat" : pnlClass(p)) + "'>" + yenSigned(holdingValue(h) - holdingCost(h)) + "（" + pctTxt + "）</span></span>" +
+        "<span class='hnums'><span class='hval'>" + money(holdingValue(h), cur) + "</span><br>" +
+        "<span class='pnl " + (p == null ? "flat" : pnlClass(p)) + "'>" + moneySigned(holdingValue(h) - holdingCost(h), cur) + "（" + pctTxt + "）</span></span>" +
       "</div>" +
       (h.memo ? "<div class='hmemo'>💭 " + esc(h.memo) + "</div>" : "") +
       (h.yutai ? "<div class='hyutai'>🎁 " + esc(h.yutai) + (h.yutaiMonth ? "（権利月：" + esc(h.yutaiMonth) + "月）" : "") + "</div>" : "") +
       hiddenNote +
       "<div class='price-line'>" +
-        "<label>買値 " + yen(num(h.buyPrice)) + " × " + esc(h.qty) + "</label>" +
+        "<label>買値 " + money(num(h.buyPrice), cur) + " × " + esc(h.qty) + "</label>" +
         "<label>現在値</label>" +
         "<input type='number' inputmode='decimal' min='0' step='any' value='" + esc(h.curPrice) + "' data-price-for='" + h.id + "' style='width:120px' />" +
-        "<span>円</span>" +
+        "<span>" + (cur === "USD" ? "$" : "円") + "</span>" +
         "<button type='button' class='btn small' data-edit='" + h.id + "'>編集</button>" +
       "</div>";
     wrap.appendChild(div);
+    });
   });
+  buildNameList();
   /* 種類セレクトを作り直す（設定で出し分け） */
   var sel = $("fType");
   var cur = sel.value;
@@ -746,10 +893,76 @@ function renderAll() {
   $("useExtraToggle").checked = state.settings.useExtra;
 }
 
+/* ---------- フォームの通貨・銘柄候補・買い増し合算 ---------- */
+/* フォームの通貨（円／ドル）。ドルを選ぶと買値・現在値のラベルが $ になる */
+var formCurrency = "JPY";
+function setFormCurrency(cur) {
+  formCurrency = cur === "USD" ? "USD" : "JPY";
+  $("fCurSeg").querySelectorAll("button").forEach(function (b) {
+    b.classList.toggle("on", b.getAttribute("data-cur") === formCurrency);
+  });
+  var unit = formCurrency === "USD" ? "$" : "円";
+  $("fBuyLabel").textContent = "買値（単価・" + unit + "）";
+  $("fCurLabel").textContent = "現在値（単価・" + unit + "）";
+  updateMergeHint();
+}
+$("fCurSeg").addEventListener("click", function (ev) {
+  var btn = ev.target.closest("[data-cur]");
+  if (btn) setFormCurrency(btn.getAttribute("data-cur"));
+});
+/* 同じ名前の既存保有（候補選択時の自動反映用。最初の1件） */
+function findByName(name) {
+  var found = null;
+  ds().holdings.forEach(function (h) { if (h.name === name && !found) found = h; });
+  return found;
+}
+/* 買い増し合算の対象（名前・種類・通貨がすべて一致する既存保有） */
+function findMergeTarget(name, type, cur) {
+  var found = null;
+  ds().holdings.forEach(function (h) {
+    if (!found && h.name === name && h.type === type && curOf(h) === cur) found = h;
+  });
+  return found;
+}
+function ensureTypeOption(type) {
+  var sel = $("fType");
+  var exists = false;
+  sel.querySelectorAll("option").forEach(function (o) { if (o.value === type) exists = true; });
+  if (!exists && TYPES[type]) {
+    var o = document.createElement("option");
+    o.value = type;
+    o.textContent = TYPES[type].label + "（設定オフ）";
+    sel.appendChild(o);
+  }
+}
+function updateMergeHint() {
+  var show = false;
+  if (!state.editingId) {
+    var name = $("fName").value.trim();
+    if (name) show = !!findMergeTarget(name, $("fType").value || "jp", formCurrency);
+  }
+  $("mergeHint").classList.toggle("hidden", !show);
+}
+/* 候補から既存銘柄を選んだら、その銘柄の種類・通貨をフォームに反映する */
+function onNamePicked() {
+  if (state.editingId) { updateMergeHint(); return; }
+  var h = findByName($("fName").value.trim());
+  if (h) {
+    ensureTypeOption(h.type);
+    $("fType").value = h.type;
+    setFormCurrency(curOf(h));
+  }
+  updateMergeHint();
+}
+$("fName").addEventListener("input", onNamePicked);
+$("fName").addEventListener("change", onNamePicked);
+$("fType").addEventListener("change", updateMergeHint);
+
 /* ---------- フォーム ---------- */
 function resetForm() {
   state.editingId = null;
   $("holdForm").reset();
+  setFormCurrency("JPY");
   $("formTitle").textContent = "保有を追加";
   $("formSaveBtn").textContent = "追加する";
   $("formCancelBtn").classList.add("hidden");
@@ -775,6 +988,7 @@ function startEdit(id) {
   $("fMemo").value = h.memo || "";
   $("fYutai").value = h.yutai || "";
   $("fYutaiMonth").value = h.yutaiMonth || "";
+  setFormCurrency(curOf(h));
   $("formTitle").textContent = "保有を編集";
   $("formSaveBtn").textContent = "保存する";
   $("formCancelBtn").classList.remove("hidden");
@@ -788,26 +1002,58 @@ $("holdForm").addEventListener("submit", function (ev) {
   if (!name) { toast("名前を入れてください"); return; }
   var buy = num($("fBuy").value);
   var curInput = $("fCur").value;
-  var rec = {
-    id: state.editingId || uid(),
-    name: name,
-    type: $("fType").value || "jp",
-    qty: num($("fQty").value),
-    buyPrice: buy,
-    curPrice: curInput === "" ? buy : num(curInput),
-    memo: $("fMemo").value.trim(),
-    yutai: $("fYutai").value.trim(),
-    yutaiMonth: $("fYutaiMonth").value
-  };
+  var type = $("fType").value || "jp";
+  var memoIn = $("fMemo").value.trim();
+  var yutaiIn = $("fYutai").value.trim();
   var d = ds();
   if (state.editingId) {
+    var rec = {
+      id: state.editingId,
+      name: name,
+      type: type,
+      currency: formCurrency,
+      qty: num($("fQty").value),
+      buyPrice: buy,
+      curPrice: curInput === "" ? buy : num(curInput),
+      memo: memoIn,
+      yutai: yutaiIn,
+      yutaiMonth: $("fYutaiMonth").value
+    };
     for (var i = 0; i < d.holdings.length; i++) {
       if (d.holdings[i].id === state.editingId) { d.holdings[i] = rec; break; }
     }
     toast("保存しました");
   } else {
-    d.holdings.push(rec);
-    toast("追加しました");
+    /* 買い増し：名前・種類・通貨がすべて一致する既存保有があれば、新規を作らず合算する */
+    var ex = findMergeTarget(name, type, formCurrency);
+    if (ex) {
+      var addQty = num($("fQty").value);
+      var oldQty = num(ex.qty);
+      var totalQty = oldQty + addQty;
+      /* 買値は平均取得単価（加重平均、小数第2位まで） */
+      ex.buyPrice = totalQty > 0
+        ? Math.round(((num(ex.buyPrice) * oldQty + buy * addQty) / totalQty) * 100) / 100
+        : buy;
+      ex.qty = totalQty;
+      if (curInput !== "") ex.curPrice = num(curInput);
+      if (memoIn !== "") ex.memo = memoIn;
+      if (yutaiIn !== "") { ex.yutai = yutaiIn; ex.yutaiMonth = $("fYutaiMonth").value; }
+      toast("買い増しとして合算しました");
+    } else {
+      d.holdings.push({
+        id: uid(),
+        name: name,
+        type: type,
+        currency: formCurrency,
+        qty: num($("fQty").value),
+        buyPrice: buy,
+        curPrice: curInput === "" ? buy : num(curInput),
+        memo: memoIn,
+        yutai: yutaiIn,
+        yutaiMonth: $("fYutaiMonth").value
+      });
+      toast("追加しました");
+    }
   }
   recordSnapshot();
   saveDataset(state.mode);
@@ -890,15 +1136,15 @@ function csvCell(v) {
 }
 function buildCsv() {
   var lines = [];
-  lines.push(["kind", "mode", "date_or_name", "type", "buy_price", "qty", "cur_price", "memo", "yutai", "yutai_month", "total"].join(","));
+  lines.push(["kind", "mode", "date_or_name", "type", "currency", "buy_price", "qty", "cur_price", "memo", "yutai", "yutai_month", "total", "total_usd"].join(","));
   ["real", "trial"].forEach(function (m) {
     var d = state.data[m];
-    lines.push(["meta", m, "capital", "", "", "", "", "", "", "", d.capital].map(csvCell).join(","));
+    lines.push(["meta", m, "capital", "", "", "", "", "", "", "", "", d.capital, ""].map(csvCell).join(","));
     d.holdings.forEach(function (h) {
-      lines.push(["holding", m, h.name, h.type, h.buyPrice, h.qty, h.curPrice, h.memo || "", h.yutai || "", h.yutaiMonth || "", ""].map(csvCell).join(","));
+      lines.push(["holding", m, h.name, h.type, curOf(h), h.buyPrice, h.qty, h.curPrice, h.memo || "", h.yutai || "", h.yutaiMonth || "", "", ""].map(csvCell).join(","));
     });
     d.snapshots.forEach(function (s) {
-      lines.push(["snapshot", m, s.date, "", "", "", "", "", "", "", s.total].map(csvCell).join(","));
+      lines.push(["snapshot", m, s.date, "", "", "", "", "", "", "", "", s.jpy, typeof s.usd === "number" ? s.usd : ""].map(csvCell).join(","));
     });
   });
   return lines.join("\n") + "\n";
@@ -941,21 +1187,35 @@ $("csvFile").addEventListener("change", function () {
       var rows = parseCsv(String(reader.result || ""));
       var next = { real: emptyDataset(), trial: emptyDataset() };
       var touched = { real: false, trial: false };
+      /* 列はヘッダー名で引く（v0.1の旧形式CSVもそのまま読める） */
+      var colMap = null;
       rows.forEach(function (r, idx) {
-        if (idx === 0 && r[0] === "kind") return;
+        if (idx === 0 && r[0] === "kind") {
+          colMap = {};
+          r.forEach(function (name, i) { colMap[name] = i; });
+          return;
+        }
+        function col(name, fallback) {
+          if (colMap && typeof colMap[name] === "number") return r[colMap[name]];
+          return r[fallback];
+        }
         var kind = r[0], m = r[1];
         if (!next[m]) return;
-        if (kind === "meta" && r[2] === "capital") { next[m].capital = num(r[10]); touched[m] = true; }
+        if (kind === "meta" && r[2] === "capital") { next[m].capital = num(col("total", 10)); touched[m] = true; }
         else if (kind === "holding") {
           next[m].holdings.push({
             id: uid() + idx, name: r[2] || "（無名）",
             type: TYPES[r[3]] ? r[3] : "jp",
-            buyPrice: num(r[4]), qty: num(r[5]), curPrice: num(r[6]),
-            memo: r[7] || "", yutai: r[8] || "", yutaiMonth: r[9] || ""
+            currency: col("currency", -1) === "USD" ? "USD" : "JPY",
+            buyPrice: num(col("buy_price", 4)), qty: num(col("qty", 5)), curPrice: num(col("cur_price", 6)),
+            memo: col("memo", 7) || "", yutai: col("yutai", 8) || "", yutaiMonth: col("yutai_month", 9) || ""
           });
           touched[m] = true;
         } else if (kind === "snapshot" && /^\d{4}-\d{2}-\d{2}$/.test(r[2] || "")) {
-          next[m].snapshots.push({ date: r[2], total: num(r[10]) });
+          var usdRaw = col("total_usd", -1);
+          var snap = { date: r[2], jpy: num(col("total", 10)) };
+          if (usdRaw !== "" && usdRaw != null) snap.usd = num(usdRaw);
+          next[m].snapshots.push(snap);
           touched[m] = true;
         }
       });
