@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#D84336" />
 <title>くまねー</title>
 <style>
-  /* くまねー v0.2
+  /* くまねー v0.3
      配色は家族ルック：背景は白、カードは「くまカラー」#f0dcbc、文字 #3a352d、アクセント #d84336。
      ダークモード対策（恒常ルール）：自分の背景を持つ要素は背景色と文字色を固定値でセット指定し、
      prefers-color-scheme: dark でも同じ値を再指定して反転させない。 */
@@ -252,6 +252,36 @@
     .seg button.on{ background:#D84336; color:#FFFFFF; }
     .merge-hint{ color:#B71C1C; }
   }
+
+  /* v0.3 証券会社CSV取り込み・配当（固定色ペアで指定） */
+  .imp-row{ background:#FFFFFF; color:#3A352D; border:1px solid #DECFA6; border-radius:12px; padding:10px 12px; margin-top:10px; }
+  .imp-row .irow-head{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .imp-row .iname{ font-weight:800; font-size:15px; }
+  .imp-row .inums{ font-size:12.5px; color:#6B6151; margin-top:4px; }
+  .imp-badge{ font-size:11.5px; font-weight:700; color:#FFFFFF; border-radius:999px; padding:1px 8px; }
+  .imp-badge.new{ background:#2E7D32; }
+  .imp-badge.upd{ background:#FB8C00; }
+  .imp-row select{ padding:5px 8px; font-size:13px; }
+  .imp-row input[type="checkbox"]{ width:18px; height:18px; }
+  .div-year{ margin-top:6px; }
+  .div-year summary{ cursor:pointer; font-weight:700; font-size:14.5px; color:#3A352D; padding:4px 0; }
+  .div-line{ display:flex; gap:8px; font-size:13px; color:#3A352D; padding:3px 0 3px 10px; border-top:1px dashed #DECFA6; }
+  .div-line .damt{ margin-left:auto; font-weight:700; white-space:nowrap; }
+  .div-line .ddate{ color:#6B6151; white-space:nowrap; }
+  .fig{ background:#FFFFFF; border:1px solid #DECFA6; border-radius:10px; padding:10px; margin-top:8px; }
+  .fig svg{ width:100%; height:auto; display:block; }
+  .fig .figcap{ font-size:12px; color:#6B6151; margin-top:6px; }
+  .steps{ margin:8px 0 0; padding-left:20px; }
+  .steps li{ margin-top:4px; }
+  @media (prefers-color-scheme: dark){
+    .imp-row{ background:#FFFFFF; color:#3A352D; border-color:#DECFA6; }
+    .imp-row .inums{ color:#6B6151; }
+    .div-year summary{ color:#3A352D; }
+    .div-line{ color:#3A352D; border-top-color:#DECFA6; }
+    .div-line .ddate{ color:#6B6151; }
+    .fig{ background:#FFFFFF; border-color:#DECFA6; }
+    .fig .figcap{ color:#6B6151; }
+  }
 </style>
 </head>
 <body>
@@ -259,7 +289,7 @@
 
   <header class="top">
     <h1>くまねー<span class="bear-c" role="img" aria-label="くまま"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.8" cy="5.4" r="2.7" fill="currentColor"/><circle cx="17.2" cy="5.4" r="2.7" fill="currentColor"/><path d="M12 20.8c-4.3 0-7-2.6-7-6.2C5 10.7 8.1 7.5 12 7.5s7 3.2 7 7.1c0 3.6-2.7 6.2-7 6.2Z" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><circle cx="9.4" cy="13.3" r="1.1" fill="currentColor"/><circle cx="14.6" cy="13.3" r="1.1" fill="currentColor"/><path d="M10.1 16.2c.6.5 1.2.8 1.9.8s1.3-.3 1.9-.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span></h1>
-    <span class="ver">v0.2</span>
+    <span class="ver">v0.3</span>
   </header>
 
   <!-- モード帯：本番とお試しは別データ。色とバッジで常に区別する -->
@@ -304,6 +334,12 @@
       <h2>保有（大きさ＝評価額）</h2>
       <div class="tiles" id="tiles"></div>
       <div class="empty-note hidden" id="tilesEmpty">まだ保有がありません。</div>
+    </div>
+
+    <div class="card">
+      <h2>配当・分配金</h2>
+      <div id="divArea"></div>
+      <div class="empty-note hidden" id="divEmpty">まだ記録がありません。「データ」タブから証券会社の配当CSVを取り込めます。</div>
     </div>
   </section>
 
@@ -403,6 +439,35 @@
     </div>
 
     <div class="card">
+      <h2>証券会社のCSVを取り込む</h2>
+      <div class="sub">証券会社のサイトで保存したCSVを取り込めます（今は楽天証券だけ対応）。ファイルはこの端末の中でだけ処理され、外部に送信されません。取得の手順は「説明」タブにあります。</div>
+      <div class="form-grid mt12">
+        <div class="full">
+          <label for="brokerFormat">CSVの種類</label>
+          <select id="brokerFormat">
+            <option value="auto">自動で判別する</option>
+            <option value="rakuten-holdings">楽天証券の保有CSV</option>
+            <option value="rakuten-dividends">楽天証券の配当CSV</option>
+          </select>
+        </div>
+      </div>
+      <div class="row-flex mt12">
+        <button type="button" class="btn" id="brokerImportBtn">証券会社のCSVを取り込む</button>
+        <input type="file" id="brokerFile" accept=".csv,text/csv" class="hidden" />
+      </div>
+    </div>
+
+    <div class="card hidden" id="brokerPreviewCard">
+      <h2>取り込みの確認（楽天証券の保有）</h2>
+      <div class="sub" id="brokerPreviewNote"></div>
+      <div id="brokerPreviewList"></div>
+      <div class="row-flex mt12">
+        <button type="button" class="btn primary" id="brokerApplyBtn">この内容で取り込む</button>
+        <button type="button" class="btn" id="brokerCancelBtn">やめる</button>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>CSV（記録の出し入れ）</h2>
       <div class="sub">本番とお試しの両方の記録を、1つのCSVファイルに書き出します。記録はこの端末の中だけに保存されるので、ときどき書き出しておくと安心です。</div>
       <div class="row-flex mt12">
@@ -428,11 +493,98 @@
       <p>買った値段と今の値段を記録して、含み損益や資産の推移を眺めるための、小さな記録アプリです。</p>
       <p>・現在値は手入力だけです。株価などを自動で取りに行くことはしません。<br>
          ・ドル建てはドルで記録します。円への換算はしません。<br>
+         ・楽天証券のCSV（保有・配当）を取り込めます。取り込みで、手で書いたメモが消えることはありません。野村證券は準備中です。<br>
          ・同じ名前・種類・通貨の保有を追加すると、買い増しとして合算されます（買値は平均取得単価になります）。<br>
          ・「本番」と「お試し」は記録が完全に分かれています。お試しは、元手を決めて「買ったつもり」で練習できます。<br>
          ・現在値を更新すると、その日の総評価額が記録され、推移グラフと週・月・年の収支に使われます。<br>
          ・記録はこの端末の中だけに保存されます。外部に送信されることはありません。機種変更やブラウザのデータ消去で消えることがあるので、CSVの書き出しがおすすめです。</p>
       <p><strong>このアプリは記録と試算のための道具です。投資の助言はしません。</strong></p>
+    </div>
+
+    <div class="card">
+      <h2>証券会社のCSVの取り込み方（楽天証券）</h2>
+      <p>証券会社のサイトでCSVファイルを保存して、このアプリの「データ」タブにある「証券会社のCSVを取り込む」から読み込みます。ファイルはこの端末の中でだけ処理され、外部に送信されません。米国株は、ドル建てのまま取り込まれます。</p>
+
+      <p><strong>保有のCSV</strong></p>
+      <div class="fig">
+        <svg viewBox="0 0 320 196" role="img" aria-label="楽天証券の保有CSVを保存する場所の模式図">
+          <defs>
+            <marker id="arrH" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0 L10 5 L0 10 z" fill="#D84336"/>
+            </marker>
+          </defs>
+          <rect x="4" y="4" width="312" height="188" rx="10" fill="#FFFDF8" stroke="#C9B98F"/>
+          <rect x="4" y="4" width="312" height="24" rx="10" fill="#F0DCBC"/>
+          <rect x="4" y="18" width="312" height="10" fill="#F0DCBC"/>
+          <circle cx="18" cy="16" r="4" fill="#D84336"/><circle cx="32" cy="16" r="4" fill="#FB8C00"/><circle cx="46" cy="16" r="4" fill="#43A047"/>
+          <text x="60" y="20" font-size="11" fill="#3A352D">証券会社の画面（イメージ）</text>
+          <rect x="16" y="40" width="128" height="132" fill="#FFFFFF" stroke="#C9B98F"/>
+          <rect x="16" y="40" width="128" height="26" fill="#D84336"/>
+          <text x="24" y="57" font-size="12" font-weight="700" fill="#FFFFFF">マイメニュー</text>
+          <rect x="16" y="72" width="128" height="26" fill="#F0DCBC"/>
+          <text x="24" y="89" font-size="11.5" fill="#3A352D">資産残高・保有商品</text>
+          <text x="24" y="115" font-size="11.5" fill="#6B6151">口座管理</text>
+          <text x="24" y="141" font-size="11.5" fill="#6B6151">取引履歴</text>
+          <line x1="148" y1="100" x2="174" y2="100" stroke="#D84336" stroke-width="2.5" marker-end="url(#arrH)"/>
+          <rect x="180" y="40" width="124" height="132" fill="#FFFFFF" stroke="#C9B98F"/>
+          <text x="188" y="58" font-size="11.5" font-weight="700" fill="#3A352D">保有商品（すべて）</text>
+          <rect x="188" y="68" width="108" height="8" fill="#E7DCC4"/>
+          <rect x="188" y="84" width="108" height="8" fill="#E7DCC4"/>
+          <rect x="188" y="100" width="108" height="8" fill="#E7DCC4"/>
+          <rect x="196" y="124" width="92" height="30" rx="15" fill="#D84336"/>
+          <text x="242" y="143" font-size="12" font-weight="700" fill="#FFFFFF" text-anchor="middle">CSVで保存</text>
+        </svg>
+        <div class="figcap">模式図です。実際の画面とは違い、証券会社のロゴ等は入っていません。</div>
+      </div>
+      <ol class="steps">
+        <li>楽天証券にログインする</li>
+        <li>「マイメニュー」→「資産残高・保有商品」を開く</li>
+        <li>「すべて」の欄の「CSVで保存」を押して、ファイルを保存する</li>
+        <li>このアプリの「データ」タブ →「証券会社のCSVを取り込む」で、そのファイルを選ぶ</li>
+        <li>確認画面で内容を見て、「この内容で取り込む」を押す</li>
+      </ol>
+
+      <p class="mt12"><strong>配当・分配金のCSV</strong></p>
+      <div class="fig">
+        <svg viewBox="0 0 320 196" role="img" aria-label="楽天証券の配当CSVを保存する場所の模式図">
+          <defs>
+            <marker id="arrD" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0 L10 5 L0 10 z" fill="#D84336"/>
+            </marker>
+          </defs>
+          <rect x="4" y="4" width="312" height="188" rx="10" fill="#FFFDF8" stroke="#C9B98F"/>
+          <rect x="4" y="4" width="312" height="24" rx="10" fill="#F0DCBC"/>
+          <rect x="4" y="18" width="312" height="10" fill="#F0DCBC"/>
+          <circle cx="18" cy="16" r="4" fill="#D84336"/><circle cx="32" cy="16" r="4" fill="#FB8C00"/><circle cx="46" cy="16" r="4" fill="#43A047"/>
+          <text x="60" y="20" font-size="11" fill="#3A352D">証券会社の画面（イメージ）</text>
+          <rect x="16" y="40" width="128" height="132" fill="#FFFFFF" stroke="#C9B98F"/>
+          <rect x="16" y="40" width="128" height="26" fill="#D84336"/>
+          <text x="24" y="57" font-size="12" font-weight="700" fill="#FFFFFF">マイメニュー</text>
+          <rect x="16" y="72" width="128" height="26" fill="#F0DCBC"/>
+          <text x="24" y="89" font-size="11.5" fill="#3A352D">配当金・分配金</text>
+          <text x="24" y="115" font-size="11.5" fill="#6B6151">口座管理</text>
+          <text x="24" y="141" font-size="11.5" fill="#6B6151">取引履歴</text>
+          <line x1="148" y1="100" x2="174" y2="100" stroke="#D84336" stroke-width="2.5" marker-end="url(#arrD)"/>
+          <rect x="180" y="40" width="124" height="132" fill="#FFFFFF" stroke="#C9B98F"/>
+          <text x="188" y="58" font-size="11.5" font-weight="700" fill="#3A352D">配当金・分配金</text>
+          <rect x="188" y="66" width="108" height="20" fill="#FFFFFF" stroke="#C9B98F"/>
+          <text x="192" y="80" font-size="10.5" fill="#6B6151">期間：2025年 〜 2026年</text>
+          <rect x="188" y="94" width="108" height="8" fill="#E7DCC4"/>
+          <rect x="188" y="108" width="108" height="8" fill="#E7DCC4"/>
+          <rect x="196" y="124" width="92" height="30" rx="15" fill="#D84336"/>
+          <text x="242" y="143" font-size="12" font-weight="700" fill="#FFFFFF" text-anchor="middle">CSVで保存</text>
+        </svg>
+        <div class="figcap">模式図です。実際の画面とは違い、証券会社のロゴ等は入っていません。</div>
+      </div>
+      <ol class="steps">
+        <li>楽天証券にログインする</li>
+        <li>「マイメニュー」→「配当金・分配金」を開く</li>
+        <li>取り込みたい期間を指定して「CSVで保存」を押す</li>
+        <li>このアプリの「データ」タブ →「証券会社のCSVを取り込む」で、そのファイルを選ぶ</li>
+      </ol>
+      <p class="sub mt8">同じ配当を二度取り込んでも、重複して数えることはありません。金額は「受取金額」（税金を引かれたあとの手取り）で記録します。</p>
+
+      <p class="mt12"><strong>野村證券</strong>は準備中です（形式を確認中）。対応したら、ここに手順を追加します。</p>
     </div>
   </section>
 
@@ -447,7 +599,7 @@
 <script>
 "use strict";
 /* ============================================================
-   くまねー v0.2
+   くまねー v0.3
    - データは localStorage のみ（外部送信なし・外部APIなし）
    - 本番（real）とお試し（trial）は別データセットで完全分離
    - 通貨は円（JPY）／ドル（USD）。換算はせず、通貨ごとに完結させる
@@ -468,7 +620,7 @@ var MODE_KEY = "kumane.mode.v1";
 var DATA_KEYS = { real: "kumane.real.v1", trial: "kumane.trial.v1" };
 
 /* ---------- 保存・読み込み ---------- */
-function emptyDataset() { return { capital: 0, holdings: [], snapshots: [] }; }
+function emptyDataset() { return { capital: 0, holdings: [], snapshots: [], dividends: [] }; }
 
 function loadDataset(which) {
   try {
@@ -477,6 +629,8 @@ function loadDataset(which) {
     var d = JSON.parse(raw);
     if (!d || !Array.isArray(d.holdings) || !Array.isArray(d.snapshots)) return emptyDataset();
     if (typeof d.capital !== "number") d.capital = 0;
+    /* v0.3 移行：配当の記録が無いデータには空の配列を足す（記録は消さない） */
+    if (!Array.isArray(d.dividends)) d.dividends = [];
     /* v0.2 移行：通貨が無い保有は「円」。スナップショットの旧 total は円の値として引き継ぐ
        （ドルの履歴は無いので usd は未定義のまま＝推移・期間収支のドル計算からは除外される） */
     d.holdings.forEach(function (h) { if (h.currency !== "USD") h.currency = "JPY"; });
@@ -888,6 +1042,7 @@ function renderHoldings() {
 function renderAll() {
   renderMode();
   renderHome();
+  renderDividends();
   renderHoldings();
   if (state.mode === "trial") $("capitalInput").value = ds().capital || "";
   $("useExtraToggle").checked = state.settings.useExtra;
@@ -1103,6 +1258,9 @@ $("capitalSaveBtn").addEventListener("click", function () {
 function setMode(m) {
   if (state.mode === m) return;
   state.mode = m;
+  /* モードが変わったら、取り込みプレビューは破棄する（取り込む先が変わるため） */
+  pendingBroker = null;
+  $("brokerPreviewCard").classList.add("hidden");
   try { localStorage.setItem(MODE_KEY, m); } catch (e) {}
   resetForm();
   renderAll();
@@ -1146,6 +1304,10 @@ function buildCsv() {
     d.snapshots.forEach(function (s) {
       lines.push(["snapshot", m, s.date, "", "", "", "", "", "", "", "", s.jpy, typeof s.usd === "number" ? s.usd : ""].map(csvCell).join(","));
     });
+    /* v0.3：配当の記録も往復させる（名前は memo 列、金額は total 列に置く） */
+    (d.dividends || []).forEach(function (dv) {
+      lines.push(["dividend", m, dv.date, "", dv.currency, "", "", "", dv.name, "", "", dv.amount, ""].map(csvCell).join(","));
+    });
   });
   return lines.join("\n") + "\n";
 }
@@ -1187,6 +1349,7 @@ $("csvFile").addEventListener("change", function () {
       var rows = parseCsv(String(reader.result || ""));
       var next = { real: emptyDataset(), trial: emptyDataset() };
       var touched = { real: false, trial: false };
+      var divSeen = { real: false, trial: false };
       /* 列はヘッダー名で引く（v0.1の旧形式CSVもそのまま読める） */
       var colMap = null;
       rows.forEach(function (r, idx) {
@@ -1217,10 +1380,22 @@ $("csvFile").addEventListener("change", function () {
           if (usdRaw !== "" && usdRaw != null) snap.usd = num(usdRaw);
           next[m].snapshots.push(snap);
           touched[m] = true;
+        } else if (kind === "dividend" && /^\d{4}-\d{2}-\d{2}$/.test(r[2] || "")) {
+          next[m].dividends.push({
+            date: r[2], name: col("memo", 8) || "（無名）",
+            amount: num(col("total", 11)),
+            currency: col("currency", -1) === "USD" ? "USD" : "JPY"
+          });
+          touched[m] = true; divSeen[m] = true;
         }
       });
       if (!touched.real && !touched.trial) { toast("読み込める記録がありませんでした"); return; }
       if (!confirm("CSVの内容で、いまの記録を置き換えます。よろしいですか？")) return;
+      /* 配当の行が無いCSV（v0.2以前など）では、既存の配当記録を消さずに引き継ぐ */
+      if (!divSeen.real) next.real.dividends = state.data.real.dividends || [];
+      if (!divSeen.trial) next.trial.dividends = state.data.trial.dividends || [];
+      next.real.dividends.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+      next.trial.dividends.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
       if (touched.real) { next.real.snapshots.sort(function (a, b) { return a.date < b.date ? -1 : 1; }); state.data.real = next.real; saveDataset("real"); }
       if (touched.trial) { next.trial.snapshots.sort(function (a, b) { return a.date < b.date ? -1 : 1; }); state.data.trial = next.trial; saveDataset("trial"); }
       resetForm();
@@ -1232,6 +1407,362 @@ $("csvFile").addEventListener("change", function () {
     $("csvFile").value = "";
   };
   reader.readAsText(file);
+});
+
+/* ---------- 証券会社CSV（楽天証券）：パース ---------- */
+/* 楽天のCSVは Shift_JIS。列の順序や表記が変わっても壊れないよう、ヘッダー名で列を引く。
+   実物CSVは未入手のため、表記ゆれ（全角・括弧・別名）に広く当てる。 */
+/* ヘッダー名の正規化：全角英数を半角に、空白と括弧を除く */
+function normHead(s) {
+  return String(s == null ? "" : s)
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); })
+    .replace(/[\s　]/g, "")
+    .replace(/[（）()]/g, "");
+}
+/* 金額・数量のゆるい数値化（カンマ・通貨記号・符号のゆれを吸収）。読めなければ null */
+function parseNumLoose(v) {
+  if (v == null) return null;
+  var s = String(v).replace(/[,\s　¥$円]/g, "").replace(/−/g, "-").replace(/＋/g, "+");
+  if (s === "" || s === "-" || s === "―") return null;
+  var n = Number(s);
+  return isFinite(n) ? n : null;
+}
+/* 正規化したヘッダー名から、その列の役割を推定する */
+function headRole(h) {
+  if (!h) return null;
+  if (h.indexOf("銘柄コード") >= 0 || h === "コード" || h.indexOf("ティッカー") >= 0 || h.indexOf("銘柄コード") >= 0) return "code";
+  if (h.indexOf("銘柄名") >= 0 || h.indexOf("ファンド名") >= 0 || h === "銘柄") return "name";
+  if (h.indexOf("受取金額") >= 0) return "amountReceived";
+  if (h.indexOf("配当") >= 0 && h.indexOf("金額") >= 0) return "amountDiv";
+  if (h.indexOf("分配金") >= 0 && h.indexOf("金額") >= 0) return "amountDiv";
+  if (h.indexOf("取得単価") >= 0 || h.indexOf("平均取得") >= 0 || h.indexOf("買付単価") >= 0 || h.indexOf("取得価格") >= 0) return "buy";
+  if (h.indexOf("基準価額") >= 0) return "cur";
+  if (h.indexOf("現在値") >= 0 || h.indexOf("現在価格") >= 0) return "cur";
+  if (h.indexOf("評価額") >= 0) return "value";
+  if (h.indexOf("時価") === 0) return "cur";
+  if (h.indexOf("保有数量") >= 0 || h.indexOf("保有口数") >= 0 || h === "口数" || h.indexOf("数量") >= 0) return "qty";
+  if (h.indexOf("受渡日") >= 0 || h.indexOf("支払日") >= 0 || h.indexOf("入金日") >= 0 || h.indexOf("受取日") >= 0 || h.indexOf("権利確定日") >= 0) return "date";
+  if (h === "通貨" || h.indexOf("通貨区分") >= 0) return "currency";
+  if (h.indexOf("商品") >= 0 || h.indexOf("口座") >= 0 || h.indexOf("預り") >= 0) return "section";
+  return null;
+}
+/* その行がヘッダー行なら、役割→列番号の対応を返す（違うなら null） */
+function headerMapFor(row) {
+  var map = {}, count = 0;
+  row.forEach(function (cell, i) {
+    var role = headRole(normHead(cell));
+    if (role && typeof map[role] !== "number") { map[role] = i; count++; }
+  });
+  return count >= 2 && (typeof map.name === "number" || typeof map.code === "number") ? map : null;
+}
+/* セクション名や商品区分の文字列から、種類と通貨の見当をつける */
+function sectionGuess(text) {
+  var s = String(text || "");
+  if (/米国株式|外国株式|海外株式|外国債券|外貨建/.test(s)) {
+    return /債券/.test(s) ? { type: "bond", currency: "USD" } : { type: "foreign", currency: "USD" };
+  }
+  if (/投資信託|ファンド/.test(s)) return { type: "fund" };
+  if (/債券/.test(s)) return { type: "bond" };
+  if (/国内株式|日本株|国内債券/.test(s)) return { type: "jp", currency: "JPY" };
+  return null;
+}
+function nonEmptyCount(r) {
+  return r.filter(function (c) { return String(c).trim() !== ""; }).length;
+}
+
+/* 楽天の保有CSV（assetbalance(all) 想定：セクションごとにヘッダー行がある）を
+   保有の配列に変換する。変換できない行は skipped に数える */
+function parseRakutenHoldings(text) {
+  var rows = parseCsv(text);
+  var out = [], skipped = 0;
+  var map = null, section = null;
+  rows.forEach(function (r) {
+    var hm = headerMapFor(r);
+    if (hm && (typeof hm.qty === "number" || typeof hm.buy === "number" || typeof hm.cur === "number")) { map = hm; return; }
+    if (nonEmptyCount(r) <= 2) {
+      var sec = sectionGuess(r.join(""));
+      if (sec) { section = sec; return; }
+      return; /* タイトル行などは読み飛ばす */
+    }
+    if (!map) { skipped++; return; }
+    var name = typeof map.name === "number" ? String(r[map.name] || "").trim() : "";
+    var code = typeof map.code === "number" ? String(r[map.code] || "").trim() : "";
+    if (!name) name = code;
+    if (!name || /合計|総計|総合計/.test(name)) { skipped++; return; }
+    var qty = typeof map.qty === "number" ? parseNumLoose(r[map.qty]) : null;
+    var buy = typeof map.buy === "number" ? parseNumLoose(r[map.buy]) : null;
+    var cur = typeof map.cur === "number" ? parseNumLoose(r[map.cur]) : null;
+    var val = typeof map.value === "number" ? parseNumLoose(r[map.value]) : null;
+    if (qty == null && buy == null && cur == null && val == null) { skipped++; return; }
+    if (qty == null || qty < 0) qty = 0;
+    /* 種類・通貨の推定：セクション → 商品区分列 → 通貨列 → コードの形 */
+    var guess = section;
+    if (typeof map.section === "number") {
+      var g2 = sectionGuess(r[map.section]);
+      if (g2) guess = g2;
+    }
+    var type = guess ? guess.type : null;
+    var currency = guess && guess.currency ? guess.currency : null;
+    if (typeof map.currency === "number") {
+      var cv = String(r[map.currency] || "");
+      if (/USD|ドル|米/.test(cv)) currency = "USD";
+      else if (/JPY|円/.test(cv)) currency = "JPY";
+    }
+    if (!currency) currency = (code && /^[A-Za-z]/.test(code)) ? "USD" : "JPY";
+    if (!type) {
+      if (code && /^\d{4}$/.test(code)) type = "jp";
+      else if (code && /^[A-Za-z]/.test(code)) type = "foreign";
+      else type = currency === "USD" ? "foreign" : "jp";
+    }
+    /* 現在値が無く評価額だけある場合は、円建てに限って評価額÷数量で補う（外貨の円換算額は使わない） */
+    if (cur == null && val != null && qty > 0 && currency === "JPY") cur = Math.round(val / qty * 100) / 100;
+    if (buy == null) buy = cur != null ? cur : 0;
+    if (cur == null) cur = buy;
+    /* 投資信託の基準価額・取得単価は「1万口あたり」。数量は口数/10000 に直す。
+       評価額の列があれば、どちらの計算が評価額に近いかで裏取りする */
+    var useQty = qty;
+    if (type === "fund" && qty > 0) {
+      if (val != null && cur > 0) {
+        var candA = Math.abs(qty * cur - val), candB = Math.abs(qty / 10000 * cur - val);
+        useQty = candB < candA ? qty / 10000 : qty;
+      } else useQty = qty / 10000;
+    }
+    out.push({ name: name, code: code, type: type, currency: currency, qty: useQty, buyPrice: buy, curPrice: cur });
+  });
+  return { rows: out, skipped: skipped };
+}
+
+/* 楽天の配当CSV（dividendlist 想定）を配当記録の配列に変換する。金額は「受取金額」を優先 */
+function parseRakutenDividends(text) {
+  var rows = parseCsv(text);
+  var out = [], skipped = 0;
+  var map = null, sectionCur = null;
+  rows.forEach(function (r) {
+    var hm = headerMapFor(r);
+    if (hm && typeof hm.date === "number" && (typeof hm.amountReceived === "number" || typeof hm.amountDiv === "number")) { map = hm; return; }
+    if (nonEmptyCount(r) <= 2) {
+      if (/米国|外国|ドル/.test(r.join(""))) sectionCur = "USD";
+      return;
+    }
+    if (!map) return;
+    var dateRaw = typeof map.date === "number" ? String(r[map.date] || "") : "";
+    var dm = dateRaw.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+    var name = typeof map.name === "number" ? String(r[map.name] || "").trim() : "";
+    if (!name && typeof map.code === "number") name = String(r[map.code] || "").trim();
+    var amt = typeof map.amountReceived === "number" ? parseNumLoose(r[map.amountReceived])
+      : (typeof map.amountDiv === "number" ? parseNumLoose(r[map.amountDiv]) : null);
+    if (!dm || !name || amt == null) { skipped++; return; }
+    var date = dm[1] + "-" + ("0" + dm[2]).slice(-2) + "-" + ("0" + dm[3]).slice(-2);
+    var currency = sectionCur || "JPY";
+    if (typeof map.currency === "number") {
+      var cv = String(r[map.currency] || "");
+      if (/USD|ドル|米/.test(cv)) currency = "USD";
+      else if (/JPY|円/.test(cv)) currency = "JPY";
+    }
+    out.push({ date: date, name: name, amount: amt, currency: currency });
+  });
+  return { rows: out, skipped: skipped };
+}
+
+/* ---------- 配当：重複防止つきマージ・年別集計・表示 ---------- */
+function dividendKey(dv) { return dv.date + "|" + dv.name + "|" + dv.amount + "|" + dv.currency; }
+function countNewDividends(existing, incoming) {
+  var seen = {};
+  (existing || []).forEach(function (d) { seen[dividendKey(d)] = true; });
+  var n = 0;
+  incoming.forEach(function (d) { if (!seen[dividendKey(d)]) { seen[dividendKey(d)] = true; n++; } });
+  return n;
+}
+function mergeDividends(existing, incoming) {
+  var seen = {};
+  existing.forEach(function (d) { seen[dividendKey(d)] = true; });
+  var added = 0;
+  incoming.forEach(function (d) {
+    var k = dividendKey(d);
+    if (!seen[k]) { seen[k] = true; existing.push(d); added++; }
+  });
+  existing.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  return added;
+}
+/* 年別の合計（円とドルは分ける）と明細 */
+function dividendYearly(list) {
+  var by = {};
+  (list || []).forEach(function (d) {
+    var y = String(d.date || "").slice(0, 4);
+    if (!/^\d{4}$/.test(y)) return;
+    if (!by[y]) by[y] = { year: y, JPY: 0, USD: 0, items: [] };
+    by[y][d.currency === "USD" ? "USD" : "JPY"] += num(d.amount);
+    by[y].items.push(d);
+  });
+  return Object.keys(by).sort().reverse().map(function (y) { return by[y]; });
+}
+function renderDividends() {
+  var area = $("divArea");
+  if (!area) return;
+  var list = ds().dividends || [];
+  $("divEmpty").classList.toggle("hidden", list.length > 0);
+  area.innerHTML = "";
+  dividendYearly(list).forEach(function (g) {
+    var parts = [];
+    if (g.JPY) parts.push(yen(g.JPY));
+    if (g.USD) parts.push(usd(g.USD));
+    var det = document.createElement("details");
+    det.className = "div-year";
+    var lines = g.items.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).map(function (d) {
+      return "<div class='div-line'><span class='ddate'>" + esc(d.date) + "</span><span>" + esc(d.name) + "</span><span class='damt'>" + money(num(d.amount), d.currency) + "</span></div>";
+    }).join("");
+    det.innerHTML = "<summary>" + esc(g.year) + "年：" + (parts.length ? parts.join(" ＋ ") : "¥0") + "（" + g.items.length + "件）</summary>" + lines;
+    area.appendChild(det);
+  });
+}
+
+/* ---------- 証券会社CSV：プレビューと反映 ---------- */
+var pendingBroker = null;
+function brokerRowStatus(r) {
+  return findMergeTarget(r.name, r.type, r.currency) ? "upd" : "new";
+}
+function showBrokerPreview(parsed) {
+  pendingBroker = parsed.rows.map(function (r) {
+    return { name: r.name, type: r.type, currency: r.currency, qty: r.qty, buyPrice: r.buyPrice, curPrice: r.curPrice, include: true };
+  });
+  pendingBroker.skippedCount = parsed.skipped || 0;
+  $("brokerPreviewCard").classList.remove("hidden");
+  renderBrokerPreview();
+  if ($("brokerPreviewCard").scrollIntoView) $("brokerPreviewCard").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function renderBrokerPreview() {
+  if (!pendingBroker) return;
+  var list = $("brokerPreviewList");
+  list.innerHTML = "";
+  var nNew = 0, nUpd = 0, hasHiddenType = false;
+  pendingBroker.forEach(function (r, i) {
+    var st = brokerRowStatus(r);
+    if (r.include) { if (st === "new") nNew++; else nUpd++; }
+    if (!typeVisible(r.type)) hasHiddenType = true;
+    var div = document.createElement("div");
+    div.className = "imp-row";
+    var typeOpts = TYPE_ORDER.map(function (k) {
+      return "<option value='" + k + "'" + (k === r.type ? " selected" : "") + ">" + TYPES[k].label + "</option>";
+    }).join("");
+    div.innerHTML =
+      "<div class='irow-head'>" +
+        "<input type='checkbox' data-imp-check='" + i + "'" + (r.include ? " checked" : "") + " />" +
+        "<span class='iname'>" + esc(r.name) + "</span>" +
+        "<span class='imp-badge " + st + "'>" + (st === "new" ? "新規" : "更新") + "</span>" +
+        "<select data-imp-type='" + i + "' aria-label='種類'>" + typeOpts + "</select>" +
+      "</div>" +
+      "<div class='inums'>" + (r.currency === "USD" ? "ドル建て" : "円建て") +
+        "／数量 " + esc(r.qty) + "／取得単価 " + money(r.buyPrice, r.currency) +
+        "／現在値 " + money(r.curPrice, r.currency) +
+        "／評価額 " + money(num(r.qty) * num(r.curPrice), r.currency) + "</div>";
+    list.appendChild(div);
+  });
+  var note = "新規 " + nNew + "件／更新 " + nUpd + "件を取り込みます。更新しても、メモと優待メモは消えません。CSVに無い保有はそのまま残ります。";
+  if (pendingBroker.skippedCount) note += " 読み取れなかった行が " + pendingBroker.skippedCount + " 件ありました。";
+  if (hasHiddenType) note += " 外国株・債券は設定オフのためホームには出ませんが、記録はされます。";
+  $("brokerPreviewNote").textContent = note;
+}
+$("brokerPreviewList").addEventListener("change", function (ev) {
+  if (!pendingBroker) return;
+  var t = ev.target;
+  if (t.hasAttribute && t.hasAttribute("data-imp-check")) {
+    pendingBroker[Number(t.getAttribute("data-imp-check"))].include = !!t.checked;
+  } else if (t.hasAttribute && t.hasAttribute("data-imp-type")) {
+    pendingBroker[Number(t.getAttribute("data-imp-type"))].type = t.value;
+  } else return;
+  renderBrokerPreview();
+});
+/* 反映：一致する既存保有は数量・取得単価・現在値だけを更新し、メモ類には絶対に触らない */
+function applyBrokerHoldings(rows) {
+  var d = ds();
+  var added = 0, updated = 0;
+  rows.forEach(function (r) {
+    if (!r.include) return;
+    var ex = findMergeTarget(r.name, r.type, r.currency);
+    if (ex) {
+      ex.qty = r.qty;
+      ex.buyPrice = r.buyPrice;
+      ex.curPrice = r.curPrice;
+      updated++;
+    } else {
+      d.holdings.push({
+        id: uid(), name: r.name, type: r.type, currency: r.currency,
+        qty: r.qty, buyPrice: r.buyPrice, curPrice: r.curPrice,
+        memo: "", yutai: "", yutaiMonth: ""
+      });
+      added++;
+    }
+  });
+  recordSnapshot();
+  saveDataset(state.mode);
+  return { added: added, updated: updated };
+}
+$("brokerApplyBtn").addEventListener("click", function () {
+  if (!pendingBroker) return;
+  var res = applyBrokerHoldings(pendingBroker);
+  pendingBroker = null;
+  $("brokerPreviewCard").classList.add("hidden");
+  renderAll();
+  toast("取り込みました（新規 " + res.added + "件／更新 " + res.updated + "件）");
+});
+$("brokerCancelBtn").addEventListener("click", function () {
+  pendingBroker = null;
+  $("brokerPreviewCard").classList.add("hidden");
+});
+
+/* ---------- 証券会社CSV：ファイル読み込みと判別 ---------- */
+$("brokerImportBtn").addEventListener("click", function () { $("brokerFile").click(); });
+$("brokerFile").addEventListener("change", function () {
+  var file = $("brokerFile").files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function () {
+    try {
+      var sjis = new TextDecoder("shift-jis").decode(reader.result);
+      var utf8 = new TextDecoder("utf-8").decode(reader.result);
+      var choice = $("brokerFormat").value;
+      var kind = null;
+      if (choice === "rakuten-holdings") kind = "holdings";
+      else if (choice === "rakuten-dividends") kind = "dividends";
+      else {
+        if (/assetbalance/i.test(file.name)) kind = "holdings";
+        else if (/dividendlist/i.test(file.name)) kind = "dividends";
+        else if (/^kind,mode/.test(utf8.replace(/^\ufeff/, ""))) {
+          toast("これはくまねー形式のCSVです。「CSVを読み込む」から読み込んでください");
+          $("brokerFile").value = "";
+          return;
+        }
+        else if (sjis.indexOf("受取金額") >= 0) kind = "dividends";
+        else if (sjis.indexOf("銘柄コード") >= 0 || sjis.indexOf("保有数量") >= 0 || sjis.indexOf("口数") >= 0) kind = "holdings";
+      }
+      if (kind === "holdings") {
+        var ph = parseRakutenHoldings(sjis);
+        if (!ph.rows.length) toast("保有の行を読み取れませんでした");
+        else showBrokerPreview(ph);
+      } else if (kind === "dividends") {
+        var pd = parseRakutenDividends(sjis);
+        if (!pd.rows.length) toast("配当の行を読み取れませんでした");
+        else {
+          if (!ds().dividends) ds().dividends = [];
+          var newCount = countNewDividends(ds().dividends, pd.rows);
+          if (!confirm("配当 " + pd.rows.length + " 件のうち、新しい " + newCount + " 件を「" + (state.mode === "trial" ? "お試し" : "本番") + "」に取り込みます。よろしいですか？")) {
+            $("brokerFile").value = "";
+            return;
+          }
+          var added = mergeDividends(ds().dividends, pd.rows);
+          saveDataset(state.mode);
+          renderAll();
+          toast("配当を取り込みました（新規 " + added + "件）");
+        }
+      } else {
+        toast("CSVの種類を判別できませんでした。「CSVの種類」で選んでから取り込んでください");
+      }
+    } catch (e) {
+      toast("CSVの読み込みに失敗しました");
+    }
+    $("brokerFile").value = "";
+  };
+  reader.readAsArrayBuffer(file);
 });
 
 /* ---------- 削除 ---------- */
