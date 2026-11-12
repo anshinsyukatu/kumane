@@ -1,0 +1,1007 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#D84336" />
+<title>くまねー</title>
+<style>
+  /* くまねー v0.1
+     配色は家族ルック：背景は白、カードは「くまカラー」#f0dcbc、文字 #3a352d、アクセント #d84336。
+     ダークモード対策（恒常ルール）：自分の背景を持つ要素は背景色と文字色を固定値でセット指定し、
+     prefers-color-scheme: dark でも同じ値を再指定して反転させない。 */
+  :root{
+    --bg:#FFFFFF;
+    --text:#3A352D;
+    --sub:#6B6151;
+    --accent:#D84336;
+    --line:#E7DCC4;
+    --card:#F0DCBC;
+    --card-text:#3A352D;
+    --card-sub:#6B6151;
+    --card-line:#DECFA6;
+    --field:#FFFFFF;
+    --field-text:#3A352D;
+    --field-line:#C9B98F;
+    --btn:#FFFFFF;
+    --btn-text:#3A352D;
+    --plus:#D32F2F;   /* 日本の慣例：プラス＝赤 */
+    --minus:#1565C0;  /* 日本の慣例：マイナス＝青 */
+    --trial:#2E7D32;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:#FFFFFF;
+    color:#3A352D;
+    font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP",system-ui,-apple-system,sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-color-scheme: dark){
+    /* ページ全体も反転させない（彼の指定：背景は白のまま） */
+    body{ background:#FFFFFF; color:#3A352D; }
+  }
+  a{color:var(--accent)}
+  button{font:inherit;cursor:pointer}
+  input,select,textarea{font:inherit}
+  .wrap{max-width:720px;margin:0 auto;padding:10px 12px 30px}
+
+  /* ヘッダー */
+  header.top{display:flex;align-items:center;gap:8px;padding:6px 2px 2px}
+  header.top h1{font-size:26px;margin:0;letter-spacing:.02em;display:flex;align-items:center}
+  .bear-c{flex:0 0 auto;width:31px;height:31px;margin-left:4px;border:2.6px solid #D84336;border-radius:50%;background:#FFFDF8;color:#D84336;display:inline-grid;place-items:center}
+  .bear-c svg{width:22px;height:22px;display:block}
+  @media (prefers-color-scheme: dark){
+    .bear-c{ background:#FFFDF8; color:#D84336; border-color:#D84336; }
+  }
+  .ver{margin-left:auto;color:var(--sub);font-size:12px}
+
+  /* モード帯（本番／お試しを色と文字で常にはっきり区別） */
+  .modebar{
+    margin-top:8px;border-radius:12px;padding:8px 10px;
+    display:flex;align-items:center;gap:10px;
+    background:#F0DCBC;color:#3A352D;border:1.6px solid #DECFA6;
+  }
+  .modebar .mode-name{font-weight:800;font-size:15px;white-space:nowrap}
+  .modebar .mode-note{font-size:12px;color:#6B6151}
+  .mode-switch{margin-left:auto;display:flex;background:#FFFFFF;border:1.6px solid #C9B98F;border-radius:999px;overflow:hidden;flex:0 0 auto}
+  .mode-switch button{border:0;background:#FFFFFF;color:#3A352D;padding:6px 14px;font-weight:700;font-size:14px}
+  .mode-switch button.on-real{background:#D84336;color:#FFFFFF}
+  .mode-switch button.on-trial{background:#2E7D32;color:#FFFFFF}
+  body.mode-trial .modebar{ background:#2E7D32; color:#FFFFFF; border-color:#2E7D32; }
+  body.mode-trial .modebar .mode-note{ color:#E8F5E9; }
+  @media (prefers-color-scheme: dark){
+    .modebar{ background:#F0DCBC; color:#3A352D; border-color:#DECFA6; }
+    .modebar .mode-note{ color:#6B6151; }
+    .mode-switch{ background:#FFFFFF; border-color:#C9B98F; }
+    .mode-switch button{ background:#FFFFFF; color:#3A352D; }
+    .mode-switch button.on-real{ background:#D84336; color:#FFFFFF; }
+    .mode-switch button.on-trial{ background:#2E7D32; color:#FFFFFF; }
+    body.mode-trial .modebar{ background:#2E7D32; color:#FFFFFF; border-color:#2E7D32; }
+    body.mode-trial .modebar .mode-note{ color:#E8F5E9; }
+  }
+
+  /* タブ */
+  nav.tabs{display:flex;gap:6px;margin:12px 0 4px}
+  nav.tabs button{
+    flex:1;border:1.6px solid #C9B98F;background:#FFFFFF;color:#3A352D;
+    border-radius:999px;padding:8px 4px;font-weight:700;font-size:14px;
+  }
+  nav.tabs button.active{background:#3A352D;color:#FFFFFF;border-color:#3A352D}
+  @media (prefers-color-scheme: dark){
+    nav.tabs button{ background:#FFFFFF; color:#3A352D; border-color:#C9B98F; }
+    nav.tabs button.active{ background:#3A352D; color:#FFFFFF; border-color:#3A352D; }
+  }
+
+  /* カード（くまカラー固定） */
+  .card{
+    background:#F0DCBC;color:#3A352D;border:1px solid #DECFA6;
+    border-radius:var(--radius);padding:14px;margin-top:12px;
+    box-shadow:0 3px 10px rgba(120,95,55,.10);
+  }
+  @media (prefers-color-scheme: dark){
+    .card{ background:#F0DCBC; color:#3A352D; border-color:#DECFA6; }
+  }
+  .card h2{font-size:15px;margin:0 0 8px;color:#3A352D}
+  .card .sub{color:#6B6151;font-size:12.5px}
+
+  .total-num{font-size:34px;font-weight:800;line-height:1.15}
+  .total-label{font-size:12.5px;color:#6B6151}
+  .pnl{font-weight:800}
+  .pnl.plus{color:#D32F2F}
+  .pnl.minus{color:#1565C0}
+  .pnl.flat{color:#6B6151}
+  .trial-capital{margin-top:6px;font-size:13px;color:#3A352D}
+
+  /* 期間収支チップ */
+  .periods{display:flex;gap:8px;margin-top:10px}
+  .periods .per{
+    flex:1;background:#FFFFFF;color:#3A352D;border:1px solid #DECFA6;border-radius:10px;
+    padding:6px 4px;text-align:center;
+  }
+  .periods .per .plabel{font-size:11.5px;color:#6B6151}
+  .periods .per .pval{font-size:15px;font-weight:800}
+  @media (prefers-color-scheme: dark){
+    .periods .per{ background:#FFFFFF; color:#3A352D; border-color:#DECFA6; }
+    .periods .per .plabel{ color:#6B6151; }
+  }
+
+  /* 横帯グラフ */
+  .band{display:flex;height:26px;border-radius:8px;overflow:hidden;border:1px solid rgba(58,53,45,.25)}
+  .band div{height:100%}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:12.5px;color:#3A352D}
+  .legend .dot{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+  /* 推移グラフ */
+  .chart-box{background:#FFFFFF;border:1px solid #DECFA6;border-radius:10px;padding:8px 6px 2px}
+  @media (prefers-color-scheme: dark){
+    .chart-box{ background:#FFFFFF; border-color:#DECFA6; }
+  }
+  .chart-box svg{width:100%;height:auto;display:block}
+  .empty-note{color:#6B6151;font-size:13px;padding:10px 4px}
+
+  /* 保有タイル：大きさ＝評価額、色＝種類 */
+  .tiles{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+  .tile{
+    border-radius:12px;padding:10px 12px;min-width:104px;min-height:70px;
+    display:flex;flex-direction:column;justify-content:center;gap:2px;
+    border:1px solid rgba(58,53,45,.18);color:#FFFFFF;
+  }
+  .tile .tname{font-weight:800;font-size:14.5px;line-height:1.25;word-break:break-all}
+  .tile .tpct{align-self:flex-start;background:#FFFFFF;border-radius:999px;padding:1px 8px;font-size:13px;font-weight:800}
+  .tile .tpct.plus{color:#D32F2F}
+  .tile .tpct.minus{color:#1565C0}
+  .tile .tpct.flat{color:#6B6151}
+  @media (prefers-color-scheme: dark){
+    .tile{ color:#FFFFFF; }
+    .tile .tpct{ background:#FFFFFF; }
+    .tile .tpct.plus{ color:#D32F2F; }
+    .tile .tpct.minus{ color:#1565C0; }
+    .tile .tpct.flat{ color:#6B6151; }
+  }
+
+  /* 保有一覧 */
+  .hold{
+    background:#FFFFFF;color:#3A352D;border:1px solid #DECFA6;border-radius:12px;
+    padding:10px 12px;margin-top:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    .hold{ background:#FFFFFF; color:#3A352D; border-color:#DECFA6; }
+  }
+  .hold .hrow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .hold .hname{font-weight:800;font-size:16px}
+  .type-chip{font-size:11.5px;font-weight:700;color:#FFFFFF;border-radius:999px;padding:1px 8px}
+  .hold .hnums{margin-left:auto;text-align:right}
+  .hold .hval{font-weight:800;font-size:16px}
+  .hold .hmemo{font-size:12.5px;color:#6B6151;margin-top:4px}
+  .hold .hyutai{font-size:12.5px;color:#3A352D;margin-top:2px}
+  .price-line{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .price-line label{font-size:12.5px;color:#6B6151}
+
+  /* 入力部品（固定色ペア） */
+  input[type="text"],input[type="number"],select,textarea{
+    background:#FFFFFF;color:#3A352D;border:1.6px solid #C9B98F;border-radius:9px;
+    padding:8px 10px;min-width:0;
+  }
+  input[type="number"]{text-align:right}
+  @media (prefers-color-scheme: dark){
+    input[type="text"],input[type="number"],select,textarea{
+      background:#FFFFFF; color:#3A352D; border-color:#C9B98F;
+    }
+  }
+  .btn{
+    background:#FFFFFF;color:#3A352D;border:1.6px solid #C9B98F;border-radius:999px;
+    padding:8px 16px;font-weight:700;font-size:14px;
+  }
+  .btn.primary{background:#D84336;color:#FFFFFF;border-color:#D84336}
+  .btn.danger{background:#FFFFFF;color:#B71C1C;border-color:#B71C1C}
+  .btn.small{padding:5px 12px;font-size:13px}
+  @media (prefers-color-scheme: dark){
+    .btn{ background:#FFFFFF; color:#3A352D; border-color:#C9B98F; }
+    .btn.primary{ background:#D84336; color:#FFFFFF; border-color:#D84336; }
+    .btn.danger{ background:#FFFFFF; color:#B71C1C; border-color:#B71C1C; }
+  }
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .form-grid .full{grid-column:1 / -1}
+  .form-grid label{display:block;font-size:12.5px;color:#6B6151;margin-bottom:3px}
+  .form-grid input,.form-grid select{width:100%}
+
+  .toast{
+    position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);
+    background:#3A352D;color:#FFFFFF;padding:9px 18px;border-radius:999px;font-size:14px;
+    opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:50;
+    box-shadow:0 6px 18px rgba(0,0,0,.25);max-width:88vw;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media (prefers-color-scheme: dark){
+    .toast{ background:#3A352D; color:#FFFFFF; }
+  }
+
+  footer.foot{margin-top:22px;color:#6B6151;font-size:12px;text-align:center;line-height:1.7}
+  .hidden{display:none !important}
+  .row-flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .mt8{margin-top:8px}.mt12{margin-top:12px}
+  .switch-line{display:flex;align-items:center;gap:10px;font-size:14.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>くまねー<span class="bear-c" role="img" aria-label="くまま"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.8" cy="5.4" r="2.7" fill="currentColor"/><circle cx="17.2" cy="5.4" r="2.7" fill="currentColor"/><path d="M12 20.8c-4.3 0-7-2.6-7-6.2C5 10.7 8.1 7.5 12 7.5s7 3.2 7 7.1c0 3.6-2.7 6.2-7 6.2Z" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><circle cx="9.4" cy="13.3" r="1.1" fill="currentColor"/><circle cx="14.6" cy="13.3" r="1.1" fill="currentColor"/><path d="M10.1 16.2c.6.5 1.2.8 1.9.8s1.3-.3 1.9-.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span></h1>
+    <span class="ver">v0.1</span>
+  </header>
+
+  <!-- モード帯：本番とお試しは別データ。色とバッジで常に区別する -->
+  <div class="modebar" id="modebar">
+    <span class="mode-name" id="modeName">本番</span>
+    <span class="mode-note" id="modeNote">実際の保有の記録</span>
+    <div class="mode-switch" role="group" aria-label="モード切替">
+      <button type="button" id="modeRealBtn">本番</button>
+      <button type="button" id="modeTrialBtn">お試し</button>
+    </div>
+  </div>
+
+  <nav class="tabs">
+    <button type="button" data-tab="home" class="active">ホーム</button>
+    <button type="button" data-tab="holdings">保有</button>
+    <button type="button" data-tab="data">データ</button>
+    <button type="button" data-tab="about">説明</button>
+  </nav>
+
+  <!-- ホーム -->
+  <section id="tab-home">
+    <div class="card">
+      <div class="total-label">総評価額</div>
+      <div class="total-num" id="totalValue">¥0</div>
+      <div class="mt8">
+        <span class="total-label">含み損益 </span>
+        <span class="pnl flat" id="totalPnl">±¥0（±0.0%）</span>
+      </div>
+      <div class="trial-capital hidden" id="capitalLine"></div>
+      <div class="periods">
+        <div class="per"><div class="plabel">週</div><div class="pval pnl flat" id="perWeek">—</div></div>
+        <div class="per"><div class="plabel">月</div><div class="pval pnl flat" id="perMonth">—</div></div>
+        <div class="per"><div class="plabel">年</div><div class="pval pnl flat" id="perYear">—</div></div>
+      </div>
+      <div class="sub mt8" id="snapNote"></div>
+    </div>
+
+    <div class="card">
+      <h2>種類の割合</h2>
+      <div id="bandArea">
+        <div class="band" id="bandBar"></div>
+        <div class="legend" id="bandLegend"></div>
+      </div>
+      <div class="empty-note hidden" id="bandEmpty">まだ保有がありません。「保有」から追加してください。</div>
+    </div>
+
+    <div class="card">
+      <h2>資産の推移</h2>
+      <div class="chart-box" id="chartBox"></div>
+      <div class="empty-note hidden" id="chartEmpty">現在値を更新すると、その日の総評価額が記録されて、ここにグラフが出ます。</div>
+    </div>
+
+    <div class="card">
+      <h2>保有（大きさ＝評価額）</h2>
+      <div class="tiles" id="tiles"></div>
+      <div class="empty-note hidden" id="tilesEmpty">まだ保有がありません。</div>
+    </div>
+  </section>
+
+  <!-- 保有 -->
+  <section id="tab-holdings" class="hidden">
+    <div class="card hidden" id="capitalCard">
+      <h2>お試しの元手</h2>
+      <div class="row-flex">
+        <input type="number" id="capitalInput" inputmode="numeric" min="0" step="1000" placeholder="1000000" style="flex:1" />
+        <span>円</span>
+        <button type="button" class="btn" id="capitalSaveBtn">設定</button>
+      </div>
+      <div class="sub mt8">お試しは、この元手で買ったつもりで記録します。本番のデータとは混ざりません。</div>
+    </div>
+
+    <div class="card">
+      <h2 id="formTitle">保有を追加</h2>
+      <form id="holdForm">
+        <div class="form-grid">
+          <div class="full">
+            <label for="fName">名前</label>
+            <input type="text" id="fName" placeholder="例：トヨタ自動車／eMAXIS Slim 全世界株式" autocomplete="off" />
+          </div>
+          <div>
+            <label for="fType">種類</label>
+            <select id="fType"></select>
+          </div>
+          <div>
+            <label for="fQty">数量</label>
+            <input type="number" id="fQty" inputmode="decimal" min="0" step="any" placeholder="100" />
+          </div>
+          <div>
+            <label for="fBuy">買値（単価・円）</label>
+            <input type="number" id="fBuy" inputmode="decimal" min="0" step="any" placeholder="2000" />
+          </div>
+          <div>
+            <label for="fCur">現在値（単価・円）</label>
+            <input type="number" id="fCur" inputmode="decimal" min="0" step="any" placeholder="買値と同じなら空でOK" />
+          </div>
+          <div class="full">
+            <label for="fMemo">なぜ買ったか（一言メモ）</label>
+            <input type="text" id="fMemo" placeholder="例：配当が安定しているから" autocomplete="off" />
+          </div>
+          <div>
+            <label for="fYutai">優待メモ（内容）</label>
+            <input type="text" id="fYutai" placeholder="例：自社商品券 1,000円分" autocomplete="off" />
+          </div>
+          <div>
+            <label for="fYutaiMonth">優待の権利月</label>
+            <select id="fYutaiMonth">
+              <option value="">なし</option>
+              <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+              <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+              <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
+              <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+            </select>
+          </div>
+        </div>
+        <div class="row-flex mt12">
+          <button type="submit" class="btn primary" id="formSaveBtn">追加する</button>
+          <button type="button" class="btn hidden" id="formCancelBtn">編集をやめる</button>
+          <button type="button" class="btn danger hidden" id="formDeleteBtn">この保有を削除</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>保有の一覧と現在値の更新</h2>
+      <div class="sub">現在値を入れ直して「更新して記録」を押すと、その日の総評価額が推移グラフに残ります。</div>
+      <div id="holdList"></div>
+      <div class="empty-note hidden" id="holdEmpty">まだ保有がありません。</div>
+      <div class="row-flex mt12">
+        <button type="button" class="btn primary" id="priceUpdateBtn">更新して記録</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- データ -->
+  <section id="tab-data" class="hidden">
+    <div class="card">
+      <h2>設定</h2>
+      <label class="switch-line">
+        <input type="checkbox" id="useExtraToggle" />
+        <span>外国株・債券も使う</span>
+      </label>
+      <div class="sub mt8">オフの間は、入力と表示に出る種類は日本株と投資信託だけになります（オフにしても、外国株・債券の記録自体は消えません）。</div>
+      <div class="sub mt8 hidden" id="hiddenCountNote"></div>
+    </div>
+
+    <div class="card">
+      <h2>CSV（記録の出し入れ）</h2>
+      <div class="sub">本番とお試しの両方の記録を、1つのCSVファイルに書き出します。記録はこの端末の中だけに保存されるので、ときどき書き出しておくと安心です。</div>
+      <div class="row-flex mt12">
+        <button type="button" class="btn" id="csvExportBtn">CSVを書き出す</button>
+        <button type="button" class="btn" id="csvImportBtn">CSVを読み込む</button>
+        <input type="file" id="csvFile" accept=".csv,text/csv" class="hidden" />
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>データの削除</h2>
+      <div class="row-flex">
+        <button type="button" class="btn danger" id="clearModeBtn">このモードの記録を全て消す</button>
+        <button type="button" class="btn danger" id="clearAllBtn">全ての記録を消す</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 説明 -->
+  <section id="tab-about" class="hidden">
+    <div class="card">
+      <h2>くまねーについて</h2>
+      <p>買った値段と今の値段を記録して、含み損益や資産の推移を眺めるための、小さな記録アプリです。</p>
+      <p>・現在値は手入力だけです。株価などを自動で取りに行くことはしません。<br>
+         ・「本番」と「お試し」は記録が完全に分かれています。お試しは、元手を決めて「買ったつもり」で練習できます。<br>
+         ・現在値を更新すると、その日の総評価額が記録され、推移グラフと週・月・年の収支に使われます。<br>
+         ・記録はこの端末の中だけに保存されます。外部に送信されることはありません。機種変更やブラウザのデータ消去で消えることがあるので、CSVの書き出しがおすすめです。</p>
+      <p><strong>このアプリは記録と試算のための道具です。投資の助言はしません。</strong></p>
+    </div>
+  </section>
+
+  <footer class="foot">
+    記録と試算のための道具です。投資の助言はしません。<br>
+    記録はこの端末の中だけに保存されます。
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   くまねー v0.1
+   - データは localStorage のみ（外部送信なし・外部APIなし）
+   - 本番（real）とお試し（trial）は別データセットで完全分離
+   - スナップショット：現在値を保存した日の総評価額を日付つきで記録
+   ============================================================ */
+
+var TYPES = {
+  jp:      { label: "日本株",   color: "#D84336" },
+  fund:    { label: "投資信託", color: "#43A047" },
+  foreign: { label: "外国株",   color: "#1E88E5" },
+  bond:    { label: "債券",     color: "#FB8C00" }
+};
+var TYPE_ORDER = ["jp", "fund", "foreign", "bond"];
+var EXTRA_TYPES = ["foreign", "bond"];
+
+var SETTINGS_KEY = "kumane.settings.v1";
+var MODE_KEY = "kumane.mode.v1";
+var DATA_KEYS = { real: "kumane.real.v1", trial: "kumane.trial.v1" };
+
+/* ---------- 保存・読み込み ---------- */
+function emptyDataset() { return { capital: 0, holdings: [], snapshots: [] }; }
+
+function loadDataset(which) {
+  try {
+    var raw = localStorage.getItem(DATA_KEYS[which]);
+    if (!raw) return emptyDataset();
+    var d = JSON.parse(raw);
+    if (!d || !Array.isArray(d.holdings) || !Array.isArray(d.snapshots)) return emptyDataset();
+    if (typeof d.capital !== "number") d.capital = 0;
+    return d;
+  } catch (e) { return emptyDataset(); }
+}
+function saveDataset(which) {
+  try { localStorage.setItem(DATA_KEYS[which], JSON.stringify(state.data[which])); } catch (e) { /* 保存できない環境ではメモリ内のみ */ }
+}
+function loadSettings() {
+  try {
+    var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+    return { useExtra: !!s.useExtra };
+  } catch (e) { return { useExtra: false }; }
+}
+function saveSettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings)); } catch (e) {}
+}
+
+var state = {
+  settings: loadSettings(),
+  mode: "real",
+  data: { real: loadDataset("real"), trial: loadDataset("trial") },
+  editingId: null
+};
+try { if (localStorage.getItem(MODE_KEY) === "trial") state.mode = "trial"; } catch (e) {}
+
+function ds() { return state.data[state.mode]; }
+
+/* ---------- 小物 ---------- */
+function $(id) { return document.getElementById(id); }
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function num(v) { var n = Number(v); return isFinite(n) ? n : 0; }
+function yen(v) {
+  var sign = v < 0 ? "−" : "";
+  return sign + "¥" + Math.abs(Math.round(v)).toLocaleString("ja-JP");
+}
+function yenSigned(v) {
+  if (Math.round(v) === 0) return "±¥0";
+  return (v > 0 ? "+" : "−") + "¥" + Math.abs(Math.round(v)).toLocaleString("ja-JP");
+}
+function pctSigned(v) {
+  if (!isFinite(v)) return "—";
+  var r = Math.round(v * 10) / 10;
+  return (r > 0 ? "+" : r < 0 ? "−" : "±") + Math.abs(r).toFixed(1) + "%";
+}
+function pnlClass(v) { return v > 0 ? "plus" : v < 0 ? "minus" : "flat"; }
+function todayStr() {
+  var d = new Date();
+  var m = ("0" + (d.getMonth() + 1)).slice(-2);
+  var dd = ("0" + d.getDate()).slice(-2);
+  return d.getFullYear() + "-" + m + "-" + dd;
+}
+function uid() { return "h" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36); }
+
+var toastTimer = null;
+function toast(msg) {
+  var t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.classList.remove("show"); }, 2400);
+}
+
+/* ---------- 種類の出し分け ---------- */
+function typeVisible(type) {
+  if (EXTRA_TYPES.indexOf(type) >= 0) return state.settings.useExtra;
+  return true;
+}
+function visibleHoldings() {
+  return ds().holdings.filter(function (h) { return typeVisible(h.type); });
+}
+
+/* ---------- 集計 ---------- */
+function holdingValue(h) { return num(h.curPrice) * num(h.qty); }
+function holdingCost(h) { return num(h.buyPrice) * num(h.qty); }
+function holdingPnlPct(h) {
+  var c = holdingCost(h);
+  if (c <= 0) return null;
+  return (holdingValue(h) - c) / c * 100;
+}
+function totals(list) {
+  var value = 0, cost = 0;
+  list.forEach(function (h) { value += holdingValue(h); cost += holdingCost(h); });
+  return { value: value, cost: cost, pnl: value - cost, pnlPct: cost > 0 ? (value - cost) / cost * 100 : null };
+}
+
+/* ---------- スナップショット ---------- */
+function recordSnapshot() {
+  var d = ds();
+  var total = totals(visibleHoldings()).value;
+  var today = todayStr();
+  var found = null;
+  d.snapshots.forEach(function (s) { if (s.date === today) found = s; });
+  if (found) found.total = total;
+  else d.snapshots.push({ date: today, total: total });
+  d.snapshots.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+}
+/* 期間収支：最新スナップショットと、days日前以前で直近のスナップショットとの差。
+   古い記録が足りない場合は最古のスナップショットを起点にする（部分的な値）。 */
+function periodReturn(days) {
+  var snaps = ds().snapshots;
+  if (snaps.length < 2) return null;
+  var latest = snaps[snaps.length - 1];
+  var t = new Date(latest.date + "T00:00:00");
+  t.setDate(t.getDate() - days);
+  var target = t.getFullYear() + "-" + ("0" + (t.getMonth() + 1)).slice(-2) + "-" + ("0" + t.getDate()).slice(-2);
+  var base = null;
+  for (var i = snaps.length - 1; i >= 0; i--) {
+    if (snaps[i].date <= target) { base = snaps[i]; break; }
+  }
+  if (!base) base = snaps[0];
+  if (base === latest) return null;
+  return latest.total - base.total;
+}
+
+/* ---------- 描画：モード ---------- */
+function renderMode() {
+  var trial = state.mode === "trial";
+  document.body.classList.toggle("mode-trial", trial);
+  $("modeName").textContent = trial ? "お試し" : "本番";
+  $("modeNote").textContent = trial ? "買ったつもりの練習用（本番とは別記録）" : "実際の保有の記録";
+  $("modeRealBtn").className = trial ? "" : "on-real";
+  $("modeTrialBtn").className = trial ? "on-trial" : "";
+  $("capitalCard").classList.toggle("hidden", !trial);
+  $("capitalLine").classList.toggle("hidden", !trial);
+  $("clearModeBtn").textContent = (trial ? "お試し" : "本番") + "の記録を全て消す";
+}
+
+/* ---------- 描画：ホーム ---------- */
+function renderHome() {
+  var list = visibleHoldings();
+  var t = totals(list);
+  $("totalValue").textContent = yen(t.value);
+  var pnlEl = $("totalPnl");
+  pnlEl.textContent = yenSigned(t.pnl) + "（" + (t.pnlPct == null ? "—" : pctSigned(t.pnlPct)) + "）";
+  pnlEl.className = "pnl " + pnlClass(t.pnl);
+
+  /* お試し：元手との差も見せる */
+  if (state.mode === "trial") {
+    var cap = num(ds().capital);
+    if (cap > 0) {
+      var diff = t.value - cap;
+      $("capitalLine").innerHTML = "元手 " + yen(cap) + " → いま <span class='pnl " + pnlClass(diff) + "'>" + yenSigned(diff) + "</span>";
+    } else {
+      $("capitalLine").textContent = "元手は「保有」タブで設定できます";
+    }
+  }
+
+  /* 週・月・年（スナップショットから） */
+  var defs = [["perWeek", 7], ["perMonth", 30], ["perYear", 365]];
+  defs.forEach(function (pair) {
+    var el = $(pair[0]);
+    var r = periodReturn(pair[1]);
+    if (r == null) { el.textContent = "—"; el.className = "pval pnl flat"; }
+    else { el.textContent = yenSigned(r); el.className = "pval pnl " + pnlClass(r); }
+  });
+  var snaps = ds().snapshots;
+  $("snapNote").textContent = snaps.length
+    ? "推移の記録：" + snaps.length + "日分（直近 " + snaps[snaps.length - 1].date + "）"
+    : "推移の記録はまだありません";
+
+  /* 横帯グラフ */
+  var byType = {};
+  TYPE_ORDER.forEach(function (k) { byType[k] = 0; });
+  list.forEach(function (h) { byType[h.type] += holdingValue(h); });
+  var band = $("bandBar"), legend = $("bandLegend");
+  band.innerHTML = ""; legend.innerHTML = "";
+  var has = t.value > 0;
+  $("bandArea").classList.toggle("hidden", !has);
+  $("bandEmpty").classList.toggle("hidden", has);
+  if (has) {
+    TYPE_ORDER.forEach(function (k) {
+      var v = byType[k];
+      if (v <= 0) return;
+      var seg = document.createElement("div");
+      seg.style.width = (v / t.value * 100) + "%";
+      seg.style.background = TYPES[k].color;
+      band.appendChild(seg);
+      var item = document.createElement("span");
+      var pct = Math.round(v / t.value * 1000) / 10;
+      item.innerHTML = "<span class='dot' style='background:" + TYPES[k].color + "'></span>" + TYPES[k].label + " " + pct + "%";
+      legend.appendChild(item);
+    });
+  }
+
+  renderChart();
+
+  /* タイル：大きさ＝評価額（flex-grow に評価額比を使う） */
+  var tiles = $("tiles");
+  tiles.innerHTML = "";
+  var sorted = list.slice().sort(function (a, b) { return holdingValue(b) - holdingValue(a); });
+  $("tilesEmpty").classList.toggle("hidden", sorted.length > 0);
+  sorted.forEach(function (h) {
+    var tile = document.createElement("div");
+    tile.className = "tile";
+    tile.style.background = TYPES[h.type] ? TYPES[h.type].color : "#8D6E63";
+    tile.style.flexGrow = String(Math.max(1, Math.round(holdingValue(h) / Math.max(1, t.value) * 100)));
+    tile.style.flexBasis = "104px";
+    var p = holdingPnlPct(h);
+    var pctTxt = p == null ? "—" : pctSigned(p);
+    var cls = p == null ? "flat" : pnlClass(p);
+    tile.innerHTML = "<div class='tname'>" + esc(h.name) + "</div>" +
+      "<span class='tpct " + cls + "'>" + pctTxt + "</span>";
+    tiles.appendChild(tile);
+  });
+}
+
+/* 推移グラフ（スナップショットの折れ線） */
+function renderChart() {
+  var snaps = ds().snapshots;
+  var box = $("chartBox");
+  $("chartEmpty").classList.toggle("hidden", snaps.length > 0);
+  box.classList.toggle("hidden", snaps.length === 0);
+  if (!snaps.length) { box.innerHTML = ""; return; }
+  var W = 640, H = 180, PAD = 8;
+  var vals = snaps.map(function (s) { return s.total; });
+  var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+  if (min === max) { min -= 1; max += 1; }
+  var x = function (i) { return snaps.length === 1 ? W / 2 : PAD + (W - PAD * 2) * i / (snaps.length - 1); };
+  var y = function (v) { return H - 22 - (H - 40) * (v - min) / (max - min); };
+  var pts = snaps.map(function (s, i) { return x(i).toFixed(1) + "," + y(s.total).toFixed(1); }).join(" ");
+  var dots = snaps.map(function (s, i) {
+    return "<circle cx='" + x(i).toFixed(1) + "' cy='" + y(s.total).toFixed(1) + "' r='3' fill='#D84336'/>";
+  }).join("");
+  box.innerHTML =
+    "<svg viewBox='0 0 " + W + " " + H + "' role='img' aria-label='資産推移グラフ'>" +
+    "<polyline points='" + pts + "' fill='none' stroke='#D84336' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'/>" +
+    dots +
+    "<text x='" + PAD + "' y='14' font-size='11' fill='#6B6151'>" + yen(max) + "</text>" +
+    "<text x='" + PAD + "' y='" + (H - 4) + "' font-size='11' fill='#6B6151'>" + esc(snaps[0].date) + " 〜 " + esc(snaps[snaps.length - 1].date) + "</text>" +
+    "</svg>";
+}
+
+/* ---------- 描画：保有一覧 ---------- */
+function renderHoldings() {
+  var list = ds().holdings;
+  var wrap = $("holdList");
+  wrap.innerHTML = "";
+  $("holdEmpty").classList.toggle("hidden", list.length > 0);
+  $("priceUpdateBtn").disabled = list.length === 0;
+  list.forEach(function (h) {
+    var div = document.createElement("div");
+    div.className = "hold";
+    var p = holdingPnlPct(h);
+    var pctTxt = p == null ? "—" : pctSigned(p);
+    var hiddenNote = typeVisible(h.type) ? "" : "<span class='sub'>（設定オフのためホームには出ていません）</span>";
+    div.innerHTML =
+      "<div class='hrow'>" +
+        "<span class='hname'>" + esc(h.name) + "</span>" +
+        "<span class='type-chip' style='background:" + (TYPES[h.type] ? TYPES[h.type].color : "#8D6E63") + "'>" + (TYPES[h.type] ? TYPES[h.type].label : h.type) + "</span>" +
+        "<span class='hnums'><span class='hval'>" + yen(holdingValue(h)) + "</span><br>" +
+        "<span class='pnl " + (p == null ? "flat" : pnlClass(p)) + "'>" + yenSigned(holdingValue(h) - holdingCost(h)) + "（" + pctTxt + "）</span></span>" +
+      "</div>" +
+      (h.memo ? "<div class='hmemo'>💭 " + esc(h.memo) + "</div>" : "") +
+      (h.yutai ? "<div class='hyutai'>🎁 " + esc(h.yutai) + (h.yutaiMonth ? "（権利月：" + esc(h.yutaiMonth) + "月）" : "") + "</div>" : "") +
+      hiddenNote +
+      "<div class='price-line'>" +
+        "<label>買値 " + yen(num(h.buyPrice)) + " × " + esc(h.qty) + "</label>" +
+        "<label>現在値</label>" +
+        "<input type='number' inputmode='decimal' min='0' step='any' value='" + esc(h.curPrice) + "' data-price-for='" + h.id + "' style='width:120px' />" +
+        "<span>円</span>" +
+        "<button type='button' class='btn small' data-edit='" + h.id + "'>編集</button>" +
+      "</div>";
+    wrap.appendChild(div);
+  });
+  /* 種類セレクトを作り直す（設定で出し分け） */
+  var sel = $("fType");
+  var cur = sel.value;
+  sel.innerHTML = "";
+  TYPE_ORDER.forEach(function (k) {
+    if (!typeVisible(k)) return;
+    var o = document.createElement("option");
+    o.value = k; o.textContent = TYPES[k].label;
+    sel.appendChild(o);
+  });
+  if (cur && typeVisible(cur)) sel.value = cur;
+  /* データタブの注記 */
+  var hiddenCount = ds().holdings.filter(function (h) { return !typeVisible(h.type); }).length;
+  var note = $("hiddenCountNote");
+  note.classList.toggle("hidden", hiddenCount === 0);
+  if (hiddenCount) note.textContent = "設定オフで隠れている種類の保有が、このモードに " + hiddenCount + " 件あります。";
+}
+
+function renderAll() {
+  renderMode();
+  renderHome();
+  renderHoldings();
+  if (state.mode === "trial") $("capitalInput").value = ds().capital || "";
+  $("useExtraToggle").checked = state.settings.useExtra;
+}
+
+/* ---------- フォーム ---------- */
+function resetForm() {
+  state.editingId = null;
+  $("holdForm").reset();
+  $("formTitle").textContent = "保有を追加";
+  $("formSaveBtn").textContent = "追加する";
+  $("formCancelBtn").classList.add("hidden");
+  $("formDeleteBtn").classList.add("hidden");
+}
+function startEdit(id) {
+  var h = null;
+  ds().holdings.forEach(function (x) { if (x.id === id) h = x; });
+  if (!h) return;
+  state.editingId = id;
+  /* 編集対象の種類が設定オフで隠れている場合は、その種類だけセレクトに足す */
+  var sel = $("fType");
+  if (!typeVisible(h.type)) {
+    var o = document.createElement("option");
+    o.value = h.type; o.textContent = TYPES[h.type].label + "（設定オフ）";
+    sel.appendChild(o);
+  }
+  $("fName").value = h.name || "";
+  sel.value = h.type;
+  $("fQty").value = h.qty;
+  $("fBuy").value = h.buyPrice;
+  $("fCur").value = h.curPrice;
+  $("fMemo").value = h.memo || "";
+  $("fYutai").value = h.yutai || "";
+  $("fYutaiMonth").value = h.yutaiMonth || "";
+  $("formTitle").textContent = "保有を編集";
+  $("formSaveBtn").textContent = "保存する";
+  $("formCancelBtn").classList.remove("hidden");
+  $("formDeleteBtn").classList.remove("hidden");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+$("holdForm").addEventListener("submit", function (ev) {
+  ev.preventDefault();
+  var name = $("fName").value.trim();
+  if (!name) { toast("名前を入れてください"); return; }
+  var buy = num($("fBuy").value);
+  var curInput = $("fCur").value;
+  var rec = {
+    id: state.editingId || uid(),
+    name: name,
+    type: $("fType").value || "jp",
+    qty: num($("fQty").value),
+    buyPrice: buy,
+    curPrice: curInput === "" ? buy : num(curInput),
+    memo: $("fMemo").value.trim(),
+    yutai: $("fYutai").value.trim(),
+    yutaiMonth: $("fYutaiMonth").value
+  };
+  var d = ds();
+  if (state.editingId) {
+    for (var i = 0; i < d.holdings.length; i++) {
+      if (d.holdings[i].id === state.editingId) { d.holdings[i] = rec; break; }
+    }
+    toast("保存しました");
+  } else {
+    d.holdings.push(rec);
+    toast("追加しました");
+  }
+  recordSnapshot();
+  saveDataset(state.mode);
+  resetForm();
+  renderAll();
+});
+$("formCancelBtn").addEventListener("click", function () { resetForm(); renderHoldings(); });
+$("formDeleteBtn").addEventListener("click", function () {
+  if (!state.editingId) return;
+  if (!confirm("この保有を削除しますか？")) return;
+  var d = ds();
+  d.holdings = d.holdings.filter(function (h) { return h.id !== state.editingId; });
+  recordSnapshot();
+  saveDataset(state.mode);
+  resetForm();
+  renderAll();
+  toast("削除しました");
+});
+
+/* ---------- 現在値の一括更新 ---------- */
+$("priceUpdateBtn").addEventListener("click", function () {
+  var inputs = document.querySelectorAll("[data-price-for]");
+  var d = ds();
+  inputs.forEach(function (inp) {
+    var id = inp.getAttribute("data-price-for");
+    d.holdings.forEach(function (h) { if (h.id === id) h.curPrice = num(inp.value); });
+  });
+  recordSnapshot();
+  saveDataset(state.mode);
+  renderAll();
+  toast("今日の総評価額を記録しました");
+});
+$("holdList").addEventListener("click", function (ev) {
+  var btn = ev.target.closest("[data-edit]");
+  if (btn) startEdit(btn.getAttribute("data-edit"));
+});
+
+/* ---------- 元手（お試し） ---------- */
+$("capitalSaveBtn").addEventListener("click", function () {
+  ds().capital = num($("capitalInput").value);
+  saveDataset(state.mode);
+  renderAll();
+  toast("元手を設定しました");
+});
+
+/* ---------- モード切替 ---------- */
+function setMode(m) {
+  if (state.mode === m) return;
+  state.mode = m;
+  try { localStorage.setItem(MODE_KEY, m); } catch (e) {}
+  resetForm();
+  renderAll();
+}
+$("modeRealBtn").addEventListener("click", function () { setMode("real"); });
+$("modeTrialBtn").addEventListener("click", function () { setMode("trial"); });
+
+/* ---------- タブ ---------- */
+document.querySelectorAll("nav.tabs button").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    document.querySelectorAll("nav.tabs button").forEach(function (b) { b.classList.remove("active"); });
+    btn.classList.add("active");
+    ["home", "holdings", "data", "about"].forEach(function (t) {
+      $("tab-" + t).classList.toggle("hidden", t !== btn.getAttribute("data-tab"));
+    });
+  });
+});
+
+/* ---------- 設定 ---------- */
+$("useExtraToggle").addEventListener("change", function () {
+  state.settings.useExtra = $("useExtraToggle").checked;
+  saveSettings();
+  renderAll();
+});
+
+/* ---------- CSV ---------- */
+function csvCell(v) {
+  var s = String(v == null ? "" : v);
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+function buildCsv() {
+  var lines = [];
+  lines.push(["kind", "mode", "date_or_name", "type", "buy_price", "qty", "cur_price", "memo", "yutai", "yutai_month", "total"].join(","));
+  ["real", "trial"].forEach(function (m) {
+    var d = state.data[m];
+    lines.push(["meta", m, "capital", "", "", "", "", "", "", "", d.capital].map(csvCell).join(","));
+    d.holdings.forEach(function (h) {
+      lines.push(["holding", m, h.name, h.type, h.buyPrice, h.qty, h.curPrice, h.memo || "", h.yutai || "", h.yutaiMonth || "", ""].map(csvCell).join(","));
+    });
+    d.snapshots.forEach(function (s) {
+      lines.push(["snapshot", m, s.date, "", "", "", "", "", "", "", s.total].map(csvCell).join(","));
+    });
+  });
+  return lines.join("\n") + "\n";
+}
+function parseCsv(text) {
+  var rows = [], row = [], cell = "", inQ = false;
+  text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { cell += '"'; i++; }
+        else inQ = false;
+      } else cell += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ",") { row.push(cell); cell = ""; }
+    else if (c === "\n") { row.push(cell); cell = ""; rows.push(row); row = []; }
+    else cell += c;
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+$("csvExportBtn").addEventListener("click", function () {
+  var blob = new Blob(["\ufeff" + buildCsv()], { type: "text/csv;charset=utf-8" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "kumane_" + todayStr() + ".csv";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  toast("CSVを書き出しました");
+});
+$("csvImportBtn").addEventListener("click", function () { $("csvFile").click(); });
+$("csvFile").addEventListener("change", function () {
+  var file = $("csvFile").files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function () {
+    try {
+      var rows = parseCsv(String(reader.result || ""));
+      var next = { real: emptyDataset(), trial: emptyDataset() };
+      var touched = { real: false, trial: false };
+      rows.forEach(function (r, idx) {
+        if (idx === 0 && r[0] === "kind") return;
+        var kind = r[0], m = r[1];
+        if (!next[m]) return;
+        if (kind === "meta" && r[2] === "capital") { next[m].capital = num(r[10]); touched[m] = true; }
+        else if (kind === "holding") {
+          next[m].holdings.push({
+            id: uid() + idx, name: r[2] || "（無名）",
+            type: TYPES[r[3]] ? r[3] : "jp",
+            buyPrice: num(r[4]), qty: num(r[5]), curPrice: num(r[6]),
+            memo: r[7] || "", yutai: r[8] || "", yutaiMonth: r[9] || ""
+          });
+          touched[m] = true;
+        } else if (kind === "snapshot" && /^\d{4}-\d{2}-\d{2}$/.test(r[2] || "")) {
+          next[m].snapshots.push({ date: r[2], total: num(r[10]) });
+          touched[m] = true;
+        }
+      });
+      if (!touched.real && !touched.trial) { toast("読み込める記録がありませんでした"); return; }
+      if (!confirm("CSVの内容で、いまの記録を置き換えます。よろしいですか？")) return;
+      if (touched.real) { next.real.snapshots.sort(function (a, b) { return a.date < b.date ? -1 : 1; }); state.data.real = next.real; saveDataset("real"); }
+      if (touched.trial) { next.trial.snapshots.sort(function (a, b) { return a.date < b.date ? -1 : 1; }); state.data.trial = next.trial; saveDataset("trial"); }
+      resetForm();
+      renderAll();
+      toast("CSVを読み込みました");
+    } catch (e) {
+      toast("CSVの読み込みに失敗しました");
+    }
+    $("csvFile").value = "";
+  };
+  reader.readAsText(file);
+});
+
+/* ---------- 削除 ---------- */
+$("clearModeBtn").addEventListener("click", function () {
+  var label = state.mode === "trial" ? "お試し" : "本番";
+  if (!confirm(label + "の記録を全て消します。元には戻せません。よろしいですか？")) return;
+  state.data[state.mode] = emptyDataset();
+  saveDataset(state.mode);
+  resetForm();
+  renderAll();
+  toast(label + "の記録を消しました");
+});
+$("clearAllBtn").addEventListener("click", function () {
+  if (!confirm("本番・お試しの両方の記録を全て消します。元には戻せません。よろしいですか？")) return;
+  state.data.real = emptyDataset();
+  state.data.trial = emptyDataset();
+  saveDataset("real");
+  saveDataset("trial");
+  resetForm();
+  renderAll();
+  toast("全ての記録を消しました");
+});
+
+/* ---------- 初期化 ---------- */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").catch(function () { /* 登録できなくてもアプリは動く */ });
+  });
+}
+renderAll();
+</script>
+</body>
+</html>
