@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#D84336" />
 <title>くまねー</title>
 <style>
-  /* くまねー v0.3
+  /* くまねー v0.3.1
      配色は家族ルック：背景は白、カードは「くまカラー」#f0dcbc、文字 #3a352d、アクセント #d84336。
      ダークモード対策（恒常ルール）：自分の背景を持つ要素は背景色と文字色を固定値でセット指定し、
      prefers-color-scheme: dark でも同じ値を再指定して反転させない。 */
@@ -289,7 +289,7 @@
 
   <header class="top">
     <h1>くまねー<span class="bear-c" role="img" aria-label="くまま"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.8" cy="5.4" r="2.7" fill="currentColor"/><circle cx="17.2" cy="5.4" r="2.7" fill="currentColor"/><path d="M12 20.8c-4.3 0-7-2.6-7-6.2C5 10.7 8.1 7.5 12 7.5s7 3.2 7 7.1c0 3.6-2.7 6.2-7 6.2Z" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><circle cx="9.4" cy="13.3" r="1.1" fill="currentColor"/><circle cx="14.6" cy="13.3" r="1.1" fill="currentColor"/><path d="M10.1 16.2c.6.5 1.2.8 1.9.8s1.3-.3 1.9-.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span></h1>
-    <span class="ver">v0.3</span>
+    <span class="ver">v0.3.1</span>
   </header>
 
   <!-- モード帯：本番とお試しは別データ。色とバッジで常に区別する -->
@@ -1470,9 +1470,102 @@ function nonEmptyCount(r) {
   return r.filter(function (c) { return String(c).trim() !== ""; }).length;
 }
 
+/* 楽天の保有CSV（assetbalance(all)）を保有の配列に変換する。
+   v0.3.1：実物CSV（2026-11-14、本人の画面で確認）で直した。
+   実物の形：■資産合計欄（要約）→ ■保有商品詳細（すべて）→ ■参考為替レート。
+   詳細は「種別・銘柄コード・ティッカー・銘柄・口座・保有数量・[単位]・平均取得価額・[単位]・現在値・[単位]・…」の
+   1つの表で、全種類が種別列で区別される。価格の通貨は [単位] 列が正（円／USD）。
+   詳細表が見つからない形のファイルは、旧方式（セクション推定）にフォールバックする */
+function unitCurrency(u) {
+  var s = String(u == null ? "" : u);
+  if (!s || s.indexOf("/") >= 0) return null;
+  if (/USD|ドル/.test(s)) return "USD";
+  if (s.indexOf("円") >= 0) return "JPY";
+  return null;
+}
+function parseRakutenDetailSection(rows) {
+  var hi = -1, col = null;
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i], c = { type: -1, code: -1, name: -1, qty: -1, buy: -1, cur: -1, val: -1 };
+    r.forEach(function (cell, j) {
+      var h = normHead(cell);
+      if (h === "種別") c.type = j;
+      else if (h.indexOf("銘柄コード") >= 0 || h.indexOf("ティッカー") >= 0) { if (c.code < 0) c.code = j; }
+      else if (h === "銘柄" || h.indexOf("銘柄名") >= 0) { if (c.name < 0) c.name = j; }
+      else if (h.indexOf("保有数量") >= 0 || h.indexOf("保有口数") >= 0) c.qty = j;
+      else if (h.indexOf("平均取得") >= 0 || h.indexOf("取得単価") >= 0) c.buy = j;
+      else if (h.indexOf("現在値") >= 0 && h.indexOf("更新日") < 0) { if (c.cur < 0) c.cur = j; }
+      else if (h.indexOf("時価評価額") >= 0) c.val = j;
+    });
+    if (c.type >= 0 && c.qty >= 0 && (c.name >= 0 || c.code >= 0)) { hi = i; col = c; break; }
+  }
+  if (hi < 0) return null;
+  /* [単位] 列の位置（見出し行で「単位」を含むセルが価格列の右隣にある） */
+  function unitColOf(j) { return (j >= 0 && String(rows[hi][j + 1] || "").indexOf("単位") >= 0) ? j + 1 : -1; }
+  var qtyUnitCol = unitColOf(col.qty), buyUnitCol = unitColOf(col.buy), curUnitCol = unitColOf(col.cur);
+  var out = [], skipped = 0;
+  for (var k = hi + 1; k < rows.length; k++) {
+    var r2 = rows[k];
+    var first = String(r2[col.type] || "").trim();
+    if (/^■/.test(first)) break; /* 次のセクションに入ったら終わり */
+    if (!first) { continue; }
+    var name = col.name >= 0 ? String(r2[col.name] || "").trim() : "";
+    var code = col.code >= 0 ? String(r2[col.code] || "").trim() : "";
+    var type = null, defCur = null;
+    if (first.indexOf("国内株式") >= 0) { type = "jp"; defCur = "JPY"; }
+    else if (first.indexOf("米国株式") >= 0 || first.indexOf("外国株式") >= 0 || first.indexOf("中国株式") >= 0 || first.indexOf("アセアン株式") >= 0 || first.indexOf("海外株式") >= 0) { type = "foreign"; defCur = "USD"; }
+    else if (first.indexOf("投資信託") >= 0 || first.indexOf("ファンド") >= 0 || first.indexOf("MMF") >= 0) { type = "fund"; defCur = "JPY"; }
+    else if (first.indexOf("国内債券") >= 0) { type = "bond"; defCur = "JPY"; }
+    else if (first.indexOf("債券") >= 0) { type = "bond"; defCur = "USD"; }
+    else { skipped++; continue; } /* 外貨預り金・預り金・金プラチナなど、保有として扱わない行 */
+    if (!name) name = code;
+    if (!name) { skipped++; continue; }
+    var qty = parseNumLoose(r2[col.qty]);
+    var buy = col.buy >= 0 ? parseNumLoose(r2[col.buy]) : null;
+    var cur = col.cur >= 0 ? parseNumLoose(r2[col.cur]) : null;
+    var val = col.val >= 0 ? parseNumLoose(r2[col.val]) : null;
+    if (qty == null && buy == null && cur == null) { skipped++; continue; }
+    if (qty == null || qty < 0) qty = 0;
+    var qtyUnit = qtyUnitCol >= 0 ? String(r2[qtyUnitCol] || "") : "";
+    var buyUnitRaw = buyUnitCol >= 0 ? String(r2[buyUnitCol] || "") : "";
+    var curUnitRaw = curUnitCol >= 0 ? String(r2[curUnitCol] || "") : "";
+    var buyUnit = unitCurrency(buyUnitRaw), curUnit = unitCurrency(curUnitRaw);
+    var currency = buyUnit || curUnit || null;
+    if (!currency) {
+      /* 単位の記載があるのに円・ドル以外（香港ドル等）は、換算しない方針のため取り込まない。
+         単位の記載自体が無い行は、種類からの推定に任せる */
+      if (buyUnitRaw || curUnitRaw) { skipped++; continue; }
+      currency = defCur;
+    }
+    /* 買値と現在値の単位が食い違う場合は、混ぜて損益を作らない（現在値を買値に寄せる） */
+    if (buyUnit && curUnit && buyUnit !== curUnit) { cur = buy; }
+    if (cur == null && val != null && qty > 0 && currency === "JPY") cur = Math.round(val / qty * 100) / 100;
+    if (buy == null) buy = cur != null ? cur : 0;
+    if (cur == null) cur = buy;
+    /* 投資信託：数量が「口」なら1万口あたりの価額に合わせて口数/10000にする（評価額があれば裏取り） */
+    var useQty = qty;
+    if (type === "fund" && qty > 0 && qtyUnit.indexOf("口") >= 0) {
+      if (val != null && cur > 0) {
+        var candA = Math.abs(qty * cur - val), candB = Math.abs(qty / 10000 * cur - val);
+        useQty = candB < candA ? qty / 10000 : qty;
+      } else useQty = qty / 10000;
+    }
+    out.push({ name: name, code: code, type: type, currency: currency, qty: useQty, buyPrice: buy, curPrice: cur });
+  }
+  return { rows: out, skipped: skipped };
+}
+function parseRakutenHoldings(text) {
+  var rows = parseCsv(text);
+  var det = parseRakutenDetailSection(rows);
+  if (det && det.rows.length) return det;
+  var leg = parseRakutenHoldingsLegacy(text);
+  if (leg.rows.length) return leg;
+  return det || leg;
+}
+
 /* 楽天の保有CSV（assetbalance(all) 想定：セクションごとにヘッダー行がある）を
    保有の配列に変換する。変換できない行は skipped に数える */
-function parseRakutenHoldings(text) {
+function parseRakutenHoldingsLegacy(text) {
   var rows = parseCsv(text);
   var out = [], skipped = 0;
   var map = null, section = null;
@@ -1737,10 +1830,12 @@ $("brokerFile").addEventListener("change", function () {
       }
       if (kind === "holdings") {
         var ph = parseRakutenHoldings(sjis);
+        if (!ph.rows.length) { var phU = parseRakutenHoldings(utf8); if (phU.rows.length) ph = phU; }
         if (!ph.rows.length) toast("保有の行を読み取れませんでした");
         else showBrokerPreview(ph);
       } else if (kind === "dividends") {
         var pd = parseRakutenDividends(sjis);
+        if (!pd.rows.length) { var pdU = parseRakutenDividends(utf8); if (pdU.rows.length) pd = pdU; }
         if (!pd.rows.length) toast("配当の行を読み取れませんでした");
         else {
           if (!ds().dividends) ds().dividends = [];
