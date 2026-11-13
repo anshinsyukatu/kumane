@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#D84336" />
 <title>くまねー</title>
 <style>
-  /* くまねー v0.3.1
+  /* くまねー v0.3.2
      配色は家族ルック：背景は白、カードは「くまカラー」#f0dcbc、文字 #3a352d、アクセント #d84336。
      ダークモード対策（恒常ルール）：自分の背景を持つ要素は背景色と文字色を固定値でセット指定し、
      prefers-color-scheme: dark でも同じ値を再指定して反転させない。 */
@@ -289,7 +289,7 @@
 
   <header class="top">
     <h1>くまねー<span class="bear-c" role="img" aria-label="くまま"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.8" cy="5.4" r="2.7" fill="currentColor"/><circle cx="17.2" cy="5.4" r="2.7" fill="currentColor"/><path d="M12 20.8c-4.3 0-7-2.6-7-6.2C5 10.7 8.1 7.5 12 7.5s7 3.2 7 7.1c0 3.6-2.7 6.2-7 6.2Z" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><circle cx="9.4" cy="13.3" r="1.1" fill="currentColor"/><circle cx="14.6" cy="13.3" r="1.1" fill="currentColor"/><path d="M10.1 16.2c.6.5 1.2.8 1.9.8s1.3-.3 1.9-.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span></h1>
-    <span class="ver">v0.3.1</span>
+    <span class="ver">v0.3.2</span>
   </header>
 
   <!-- モード帯：本番とお試しは別データ。色とバッジで常に区別する -->
@@ -493,7 +493,7 @@
       <p>買った値段と今の値段を記録して、含み損益や資産の推移を眺めるための、小さな記録アプリです。</p>
       <p>・現在値は手入力だけです。株価などを自動で取りに行くことはしません。<br>
          ・ドル建てはドルで記録します。円への換算はしません。<br>
-         ・楽天証券のCSV（保有・配当）を取り込めます。取り込みで、手で書いたメモが消えることはありません。野村證券は準備中です。<br>
+         ・楽天証券のCSV（保有・配当）を取り込めます。保有CSVからは、預り金・外貨預り金・楽天銀行の預金も「現金・預金」として取り込みます。取り込みで、手で書いたメモが消えることはありません。野村證券は準備中です。<br>
          ・同じ名前・種類・通貨の保有を追加すると、買い増しとして合算されます（買値は平均取得単価になります）。<br>
          ・「本番」と「お試し」は記録が完全に分かれています。お試しは、元手を決めて「買ったつもり」で練習できます。<br>
          ・現在値を更新すると、その日の総評価額が記録され、推移グラフと週・月・年の収支に使われます。<br>
@@ -610,9 +610,10 @@ var TYPES = {
   jp:      { label: "日本株",   color: "#D84336" },
   fund:    { label: "投資信託", color: "#43A047" },
   foreign: { label: "外国株",   color: "#1E88E5" },
-  bond:    { label: "債券",     color: "#FB8C00" }
+  bond:    { label: "債券",     color: "#FB8C00" },
+  cash:    { label: "現金・預金", color: "#607D8B" }
 };
-var TYPE_ORDER = ["jp", "fund", "foreign", "bond"];
+var TYPE_ORDER = ["jp", "fund", "foreign", "bond", "cash"];
 var EXTRA_TYPES = ["foreign", "bond"];
 
 var SETTINGS_KEY = "kumane.settings.v1";
@@ -1511,13 +1512,24 @@ function parseRakutenDetailSection(rows) {
     if (!first) { continue; }
     var name = col.name >= 0 ? String(r2[col.name] || "").trim() : "";
     var code = col.code >= 0 ? String(r2[col.code] || "").trim() : "";
+    /* 預り金（現金）は価格列の意味が違う（為替レート等）ため、金額＝数量・単価1で別扱いにする */
+    if (first.indexOf("預り金") >= 0) {
+      var cqty = parseNumLoose(r2[col.qty]);
+      var cc = null;
+      if (/米ドル|USD/.test(name)) cc = "USD";
+      else if (/円|JPY/.test(name) || !name) cc = "JPY";
+      if (cc && cqty != null && cqty > 0) {
+        out.push({ name: name ? first + "（" + name + "）" : first, code: "", type: "cash", currency: cc, qty: cqty, buyPrice: 1, curPrice: 1 });
+      } else skipped++;
+      continue;
+    }
     var type = null, defCur = null;
     if (first.indexOf("国内株式") >= 0) { type = "jp"; defCur = "JPY"; }
     else if (first.indexOf("米国株式") >= 0 || first.indexOf("外国株式") >= 0 || first.indexOf("中国株式") >= 0 || first.indexOf("アセアン株式") >= 0 || first.indexOf("海外株式") >= 0) { type = "foreign"; defCur = "USD"; }
     else if (first.indexOf("投資信託") >= 0 || first.indexOf("ファンド") >= 0 || first.indexOf("MMF") >= 0) { type = "fund"; defCur = "JPY"; }
     else if (first.indexOf("国内債券") >= 0) { type = "bond"; defCur = "JPY"; }
     else if (first.indexOf("債券") >= 0) { type = "bond"; defCur = "USD"; }
-    else { skipped++; continue; } /* 外貨預り金・預り金・金プラチナなど、保有として扱わない行 */
+    else { skipped++; continue; } /* 金・プラチナなど、保有として扱わない行 */
     if (!name) name = code;
     if (!name) { skipped++; continue; }
     var qty = parseNumLoose(r2[col.qty]);
@@ -1554,10 +1566,32 @@ function parseRakutenDetailSection(rows) {
   }
   return { rows: out, skipped: skipped };
 }
+/* 要約欄（■資産合計欄）から現金を読む：預り金（円）と楽天銀行普通預金残高。
+   「預り金合計」は外貨預り金の円換算を含むため使わない（二重計上防止）。
+   金額は2列目（時価評価額の列）。「未取得」など数字でない行は読み飛ばす */
+function parseRakutenSummaryCash(rows) {
+  var out = [];
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var head = String(r[0] || "").trim();
+    if (head.indexOf("保有商品詳細") >= 0) break;
+    if (head === "預り金" || head === "楽天銀行普通預金残高") {
+      var amt = parseNumLoose(r[1]);
+      if (amt != null && amt > 0) {
+        out.push({ name: head === "預り金" ? "預り金" : "楽天銀行 普通預金", code: "", type: "cash", currency: "JPY", qty: amt, buyPrice: 1, curPrice: 1 });
+      }
+    }
+  }
+  return out;
+}
 function parseRakutenHoldings(text) {
   var rows = parseCsv(text);
   var det = parseRakutenDetailSection(rows);
-  if (det && det.rows.length) return det;
+  if (det && det.rows.length) {
+    var cashRows = parseRakutenSummaryCash(rows);
+    if (cashRows.length) return { rows: det.rows.concat(cashRows), skipped: det.skipped };
+    return det;
+  }
   var leg = parseRakutenHoldingsLegacy(text);
   if (leg.rows.length) return leg;
   return det || leg;
