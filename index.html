@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#D84336" />
 <title>くまねー</title>
 <style>
-  /* くまねー v0.4
+  /* くまねー v0.5
      配色は家族ルック：背景は白、カードは「くまカラー」#f0dcbc、文字 #3a352d、アクセント #d84336。
      ダークモード対策（恒常ルール）：自分の背景を持つ要素は背景色と文字色を固定値でセット指定し、
      prefers-color-scheme: dark でも同じ値を再指定して反転させない。 */
@@ -313,6 +313,22 @@
     .fetch-note{ color:#6B6151; }
     .hold .hbroker{ color:#6B6151; }
   }
+
+  /* v0.5 全資産合計・円グラフ凡例チップ・推移グラフ見出し（固定色ペアで指定） */
+  .grand-block + .grand-block{ margin-top:12px; border-top:1px dashed #DECFA6; padding-top:10px; }
+  .grand-line{ display:flex; gap:8px; align-items:baseline; font-size:14.5px; padding:1.5px 0; }
+  .grand-line .glabel{ color:#6B6151; font-size:12.5px; min-width:74px; }
+  .grand-line .gval{ font-weight:800; }
+  .grand-count{ font-size:12.5px; color:#6B6151; font-weight:400; }
+  .pie-legend .pl-dot{ display:inline-block; width:11px; height:11px; border-radius:3px; flex:0 0 auto; align-self:center; }
+  .chart-cur{ font-weight:800; font-size:14px; color:#3A352D; margin:12px 0 2px; }
+  .chart-cur:first-child{ margin-top:0; }
+  @media (prefers-color-scheme: dark){
+    .grand-block + .grand-block{ border-top-color:#DECFA6; }
+    .grand-line .glabel{ color:#6B6151; }
+    .grand-count{ color:#6B6151; }
+    .chart-cur{ color:#3A352D; }
+  }
 </style>
 </head>
 <body>
@@ -320,7 +336,7 @@
 
   <header class="top">
     <h1>くまねー<span class="bear-c" role="img" aria-label="くまま"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.8" cy="5.4" r="2.7" fill="currentColor"/><circle cx="17.2" cy="5.4" r="2.7" fill="currentColor"/><path d="M12 20.8c-4.3 0-7-2.6-7-6.2C5 10.7 8.1 7.5 12 7.5s7 3.2 7 7.1c0 3.6-2.7 6.2-7 6.2Z" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><circle cx="9.4" cy="13.3" r="1.1" fill="currentColor"/><circle cx="14.6" cy="13.3" r="1.1" fill="currentColor"/><path d="M10.1 16.2c.6.5 1.2.8 1.9.8s1.3-.3 1.9-.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span></h1>
-    <span class="ver">v0.4</span>
+    <span class="ver">v0.5</span>
   </header>
 
   <!-- モード帯：本番とお試しは別データ。色とバッジで常に区別する -->
@@ -342,6 +358,12 @@
 
   <!-- ホーム -->
   <section id="tab-home">
+    <div class="card">
+      <h2>全資産合計</h2>
+      <div id="grandArea"></div>
+      <div class="sub mt8">円とドルは換算せず、通貨ごとに分けて表示しています。</div>
+    </div>
+
     <div class="card">
       <div class="row-flex" style="justify-content:flex-end">
         <button type="button" class="btn small" id="priceFetchBtn">現在値を更新</button>
@@ -418,7 +440,7 @@
             <select id="fType"></select>
           </div>
           <div>
-            <label for="fQty">数量</label>
+            <label for="fQty" id="fQtyLabel">数量</label>
             <input type="number" id="fQty" inputmode="decimal" min="0" step="any" placeholder="100" />
           </div>
           <div>
@@ -432,9 +454,10 @@
           <div class="full">
             <label for="fBroker" id="fBrokerLabel">証券会社</label>
             <select id="fBroker"></select>
+            <div class="sub mt8">一覧から選べます。一覧にない会社・銀行は、一番下の「＋ 新しく追加する」を選ぶと書き加えられます。</div>
           </div>
-          <div class="full">
-            <label for="fBrokerNew">候補にない場合（入力して「追加」を押すと次回から選べます）</label>
+          <div class="full hidden" id="fBrokerNewRow">
+            <label for="fBrokerNew" id="fBrokerNewLabel">新しい証券会社名を書く（「追加」を押すと上の選択肢に入り、次回からも選べます）</label>
             <div class="row-flex">
               <input type="text" id="fBrokerNew" placeholder="例：○○証券／○○銀行" autocomplete="off" style="flex:1" />
               <button type="button" class="btn small" id="fBrokerAddBtn">追加</button>
@@ -447,20 +470,6 @@
             <label for="fMemo">なぜ買ったか（一言メモ）</label>
             <input type="text" id="fMemo" placeholder="例：配当が安定しているから" autocomplete="off" />
           </div>
-          <div>
-            <label for="fYutai">優待メモ（内容）</label>
-            <input type="text" id="fYutai" placeholder="例：自社商品券 1,000円分" autocomplete="off" />
-          </div>
-          <div>
-            <label for="fYutaiMonth">優待の権利月</label>
-            <select id="fYutaiMonth">
-              <option value="">なし</option>
-              <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
-              <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
-              <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
-              <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
-            </select>
-          </div>
         </div>
         <div class="row-flex mt12">
           <button type="submit" class="btn primary" id="formSaveBtn">追加する</button>
@@ -472,7 +481,7 @@
 
     <div class="card">
       <h2>保有の一覧</h2>
-      <div class="sub">現在値は表示だけです。ホームの「現在値を更新」（コードのある日本株・米国株）か、CSV取り込みで変わります。</div>
+      <div class="sub">名前・種類・数量・証券会社だけのシンプルな表示です。内容の変更と削除は「編集」からできます。</div>
       <div id="holdList"></div>
       <div class="empty-note hidden" id="holdEmpty">まだ保有がありません。</div>
     </div>
@@ -550,7 +559,8 @@
       <p>・現在値は、ホームの「現在値を更新」ボタンでまとめて更新できます（銘柄コードのある日本株・米国株だけ。株価は外部サイト stooq の終値で、遅れて表示されることがあります）。投資信託・債券・現金は対象外で、CSV取り込みや買値のままになります。<br>
          ・ドル建てはドルで記録します。円への換算はしません。<br>
          ・楽天証券のCSV（保有・配当）を取り込めます。保有CSVからは、預り金・外貨預り金・楽天銀行の預金も「現金・預金」として取り込みます。取り込みで、手で書いたメモが消えることはありません。配当の取り込みで保有が変わることはありません。野村證券は準備中です。<br>
-         ・保有には証券会社（現金・預金は金融機関）を付けられます。楽天のCSVから取り込むと自動で付きます。<br>
+         ・保有には証券会社（現金・預金は金融機関）を付けられます。楽天のCSVから取り込むと自動で付きます。証券会社・金融機関は一覧から選ぶほか、欄の一番下の「＋ 新しく追加する」から、自分の使っている会社や銀行を書き加えることもできます（追加した名前は次回からも選べます）。<br>
+         ・現金・預金は、CSVがなくても手入力で追加できます。「保有」タブの追加フォームで種類に「現金・預金」を選び、金額（残高）と金融機関（候補から選ぶか、自分で追加もできます）を入れてください。<br>
          ・同じ名前・種類・通貨の保有を追加すると、買い増しとして合算されます（買値は平均取得単価になります）。<br>
          ・「本番」と「お試し」は記録が完全に分かれています。お試しは、元手を決めて「買ったつもり」で練習できます。<br>
          ・現在値を更新すると、その日の総評価額が記録され、推移グラフと週・月・年の収支に使われます。<br>
@@ -560,6 +570,13 @@
 
     <div class="card">
       <h2>更新履歴</h2>
+      <p><strong>v0.5</strong><br>
+         ・ホームの一番上に「全資産合計」を追加しました（通貨ごとに、評価額合計・元本合計・損益合計・件数。円とドルの換算・合算はしません）。<br>
+         ・円グラフは、評価額の大きい順に上位10件までを銘柄ごとの色で表示し、11件目以降は「その他（N件）」にまとめました。凡例に色チップと構成比（％）を付けました。<br>
+         ・資産の推移グラフを円とドルで分け、金額の目盛り（縦軸）と日付（横軸）を付けました。<br>
+         ・保有の一覧をシンプルにしました（名前・種類・数量・証券会社だけ）。編集画面から削除もできます（押すと確認が出ます）。<br>
+         ・現金・預金を、CSVがなくても手入力で追加できるようにしました。<br>
+         ・証券会社・金融機関の欄を分かりやすくしました。一覧から選ぶほか、一番下の「＋ 新しく追加する」を選ぶと新しい会社・銀行を書き加えられます。</p>
       <p><strong>v0.4</strong><br>
          ・配当CSVを取り込むと保有の現在値が0になることがある問題を直しました（配当の取り込みでは保有は一切変わりません）。<br>
          ・ホームに「現在値を更新」ボタンを追加（コードのある日本株・米国株の終値をまとめて取得。投資信託・債券・現金は対象外）。<br>
@@ -671,7 +688,7 @@
 <script>
 "use strict";
 /* ============================================================
-   くまねー v0.4
+   くまねー v0.5
    - データは localStorage のみ（記録の外部送信なし）
    - 本番（real）とお試し（trial）は別データセットで完全分離
    - 通貨は円（JPY）／ドル（USD）。換算はせず、通貨ごとに完結させる
@@ -956,10 +973,33 @@ function renderHome() {
     ? "推移の記録：" + snaps.length + "日分（直近 " + snaps[snaps.length - 1].date + "）"
     : "推移の記録はまだありません";
 
+  renderGrand(tc);
   renderBand(list, tc);
   renderChart();
   renderPie(list, tc);
   renderBestWorst(list);
+}
+
+/* 全資産合計：通貨ごとに、評価額合計・元本合計・損益合計・件数を並べる
+   （円とドルは換算も合算もしない。金額は「合計」だけを数字で出す） */
+function renderGrand(tc) {
+  var area = $("grandArea");
+  var curs = CURRENCIES.filter(function (c) { return tc[c].count > 0; });
+  if (!curs.length) {
+    area.innerHTML = "<div class='empty-note'>まだ保有がありません。「保有」から追加してください。</div>";
+    return;
+  }
+  area.innerHTML = curs.map(function (cur) {
+    var t = tc[cur];
+    return "<div class='grand-block'>" +
+      "<div class='band-cur'>" + curSymbol(cur) + " " + (cur === "USD" ? "ドル建て" : "円建て") +
+        " <span class='grand-count'>" + t.count + "件</span></div>" +
+      "<div class='grand-line'><span class='glabel'>評価額合計</span><span class='gval'>" + money(t.value, cur) + "</span></div>" +
+      "<div class='grand-line'><span class='glabel'>元本合計</span><span>" + money(t.cost, cur) + "</span></div>" +
+      "<div class='grand-line'><span class='glabel'>損益合計</span><span class='pnl " + pnlClass(t.pnl) + "'>" +
+        moneySigned(t.pnl, cur) + "（" + (t.pnlPct == null ? "—" : pctSigned(t.pnlPct)) + "）</span></div>" +
+      "</div>";
+  }).join("");
 }
 
 /* 横帯グラフ：通貨ごとに1本（割合はその通貨の中での割合） */
@@ -1002,8 +1042,27 @@ function renderBand(list, tc) {
 }
 
 /* 円グラフ：通貨ごとに1つ（円とドルは絶対に混ぜない）。
-   スライスの色も凡例の文字色も「種類の色」。凡例は評価額の大きい順で、名前＋証券会社だけ
-   （個別の金額は出さず、合計だけを数字で出す） */
+   v0.5：評価額の大きい順に上位10件までを銘柄ごとの色で個別表示し、11件目以降は
+   「その他（N件）」としてグレーの1スライスにまとめる。凡例は色チップ＋名前（＋証券会社）
+   ＋構成比％（個別の金額は出さず、合計だけを数字で出す） */
+var PIE_COLORS = ["#D84336", "#1E88E5", "#43A047", "#FB8C00", "#8E24AA", "#00ACC1", "#EC407A", "#5D4037", "#3949AB", "#00897B"];
+var PIE_OTHER_COLOR = "#9E9E9E";
+/* 円グラフ用に通貨別のグループを作る（純粋関数：テストから直接呼べる） */
+function pieGroups(list, cur, total) {
+  var sorted = list.filter(function (h) { return curOf(h) === cur && holdingValue(h) > 0; })
+    .sort(function (a, b) { return holdingValue(b) - holdingValue(a); });
+  var groups = sorted.slice(0, 10).map(function (h, i) {
+    return { name: h.name, broker: h.broker || "", value: holdingValue(h), color: PIE_COLORS[i], other: false, count: 1 };
+  });
+  var rest = sorted.slice(10);
+  if (rest.length) {
+    var rv = 0;
+    rest.forEach(function (h) { rv += holdingValue(h); });
+    groups.push({ name: "その他", broker: "", value: rv, color: PIE_OTHER_COLOR, other: true, count: rest.length });
+  }
+  groups.forEach(function (g) { g.pct = total > 0 ? Math.round(g.value / total * 1000) / 10 : 0; });
+  return groups;
+}
 function pieSlicePath(cx, cy, r, a0, a1) {
   var x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
   var x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
@@ -1016,34 +1075,32 @@ function renderPie(list, tc) {
   area.innerHTML = "";
   var any = false;
   CURRENCIES.forEach(function (cur) {
-    var group = list.filter(function (h) { return curOf(h) === cur && holdingValue(h) > 0; })
-      .sort(function (a, b) { return holdingValue(b) - holdingValue(a); });
     var total = tc[cur].value;
-    if (!group.length || total <= 0) return;
+    var groups = pieGroups(list, cur, total);
+    if (!groups.length || total <= 0) return;
     any = true;
     var block = document.createElement("div");
     block.className = "pie-block";
     var R = 74, C = 80;
     var svg = "<svg class='pie-svg' width='160' height='160' viewBox='0 0 160 160' role='img' aria-label='保有の割合（" + (cur === "USD" ? "ドル" : "円") + "）'>";
     var angle = -Math.PI / 2;
-    group.forEach(function (h) {
-      var frac = holdingValue(h) / total;
+    groups.forEach(function (g) {
+      var frac = g.value / total;
       var a1 = angle + frac * Math.PI * 2;
-      var color = TYPES[h.type] ? TYPES[h.type].color : "#8D6E63";
-      if (group.length === 1 || frac >= 0.999) {
-        svg += "<circle cx='" + C + "' cy='" + C + "' r='" + R + "' fill='" + color + "'/>";
+      if (groups.length === 1 || frac >= 0.999) {
+        svg += "<circle cx='" + C + "' cy='" + C + "' r='" + R + "' fill='" + g.color + "'/>";
       } else {
-        svg += "<path d='" + pieSlicePath(C, C, R, angle, a1) + "' fill='" + color + "' stroke='#FFFFFF' stroke-width='1.6'/>";
+        svg += "<path d='" + pieSlicePath(C, C, R, angle, a1) + "' fill='" + g.color + "' stroke='#FFFFFF' stroke-width='1.6'/>";
       }
       angle = a1;
     });
     svg += "</svg>";
-    var legend = group.map(function (h) {
-      var color = TYPES[h.type] ? TYPES[h.type].color : "#8D6E63";
-      var pct = Math.round(holdingValue(h) / total * 1000) / 10;
-      return "<div class='pl-row'><span class='pl-name' style='color:" + color + "'>" + esc(h.name) + "</span>" +
-        (h.broker ? "<span class='pl-broker'>" + esc(h.broker) + "</span>" : "") +
-        "<span class='pl-pct'>" + pct + "%</span></div>";
+    var legend = groups.map(function (g) {
+      var nm = g.other ? "その他（" + g.count + "件）" : esc(g.name);
+      return "<div class='pl-row'><span class='pl-dot' style='background:" + g.color + "'></span>" +
+        "<span class='pl-name'>" + nm + "</span>" +
+        (g.broker ? "<span class='pl-broker'>" + esc(g.broker) + "</span>" : "") +
+        "<span class='pl-pct'>" + g.pct + "%</span></div>";
     }).join("");
     block.innerHTML =
       "<div class='band-cur'>" + curSymbol(cur) + "</div>" +
@@ -1089,43 +1146,81 @@ function renderBestWorst(list) {
   area.appendChild(wrap);
 }
 
-/* 推移グラフ：通貨ごとに線を分ける。円とドルは桁が違うので、縦軸は通貨ごとに正規化する
-   （線は「その通貨の中での上下の形」を表す。凡例は記号＋最大値のみ） */
+/* 推移グラフ：v0.5で通貨ごとにグラフそのものを分け、金額の目盛り（縦軸）と
+   日付（横軸）を付けた。各グラフはその通貨の記録だけで描く（円とドルは混ぜない）。
+   初回スナップショットの前日に「値0」の起点を置き、0から右へ伸びる形にするのは従来どおり
+   （起点はグラフ描画だけのもので、スナップショットの記録自体には入れない） */
+function chartTicks(max) {
+  if (!(max > 0)) return { top: 1, step: 1 };
+  var raw = max / 4;
+  var mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  var n = raw / mag;
+  var step = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * mag;
+  return { top: Math.ceil(max / step) * step, step: step };
+}
+function fmtTickYen(v) {
+  if (v >= 10000) {
+    var s = String(Math.round(v / 1000) / 10).replace(/\.0$/, "");
+    return "¥" + s + "万";
+  }
+  return "¥" + Math.round(v).toLocaleString("ja-JP");
+}
+function fmtTickUsd(v) { return "$" + Math.round(v).toLocaleString("en-US"); }
+function dayBeforeStr(dateStr) {
+  var d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() - 1);
+  return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+}
+function shortDateStr(dateStr) {
+  var p = String(dateStr).split("-");
+  return p.length === 3 ? Number(p[1]) + "/" + Number(p[2]) : String(dateStr);
+}
 function renderChart() {
   var box = $("chartBox");
-  var series = [
-    { key: "jpy", cur: "JPY", color: "#D84336", pts: snapSeries("jpy") },
-    { key: "usd", cur: "USD", color: "#1565C0", pts: snapSeries("usd") }
-  ].filter(function (s) { return s.pts.length > 0; });
-  $("chartEmpty").classList.toggle("hidden", series.length > 0);
-  box.classList.toggle("hidden", series.length === 0);
-  if (!series.length) { box.innerHTML = ""; return; }
-  var W = 640, H = 180, PAD = 8;
-  var svg = "<svg viewBox='0 0 " + W + " " + H + "' role='img' aria-label='資産推移グラフ'>";
-  series.forEach(function (s, si) {
-    /* v0.4：初回スナップショットの前日に「値0」の起点を置き、0から右へ伸びる形にする
-       （起点はグラフ描画だけのもので、スナップショットの記録自体には入れない） */
-    var disp = s.pts.map(function (p) { return p[s.key]; });
-    if (disp.length) disp = [0].concat(disp);
-    var vals = disp;
-    var rawMax = Math.max.apply(null, s.pts.map(function (p) { return p[s.key]; }));
-    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
-    if (min === max) { min -= 1; max += 1; }
-    var x = function (i) { return disp.length === 1 ? W / 2 : PAD + (W - PAD * 2) * i / (disp.length - 1); };
-    var y = function (v) { return H - 22 - (H - 56) * (v - min) / (max - min); };
-    var pts = disp.map(function (v, i) { return x(i).toFixed(1) + "," + y(v).toFixed(1); }).join(" ");
-    var dots = disp.map(function (v, i) {
-      return "<circle cx='" + x(i).toFixed(1) + "' cy='" + y(v).toFixed(1) + "' r='3' fill='" + s.color + "'/>";
+  var defs = [
+    { key: "jpy", color: "#D84336", head: "¥ 円建て", unit: "単位：円", fmt: fmtTickYen },
+    { key: "usd", color: "#1565C0", head: "$ ドル建て", unit: "単位：ドル（$）", fmt: fmtTickUsd }
+  ];
+  var any = false;
+  var html = "";
+  defs.forEach(function (df) {
+    var pts = snapSeries(df.key);
+    if (!pts.length) return;
+    any = true;
+    var vals = [0].concat(pts.map(function (p) { return p[df.key]; }));
+    var dates = [dayBeforeStr(pts[0].date)].concat(pts.map(function (p) { return p.date; }));
+    var max = Math.max.apply(null, vals);
+    var tk = chartTicks(max);
+    var W = 640, H = 210, L = 68, R = 10, T = 22, B = 26;
+    var pw = W - L - R, ph = H - T - B;
+    var X = function (i) { return vals.length === 1 ? L + pw / 2 : L + pw * i / (vals.length - 1); };
+    var Y = function (v) { return T + ph - ph * (v / tk.top); };
+    var svg = "<div class='chart-cur'>" + df.head + "</div>";
+    svg += "<svg viewBox='0 0 " + W + " " + H + "' role='img' aria-label='資産推移グラフ（" + df.head + "）'>";
+    svg += "<text x='" + L + "' y='13' font-size='11' fill='#6B6151'>" + df.unit + "</text>";
+    for (var gv = 0; gv <= tk.top + tk.step * 0.001; gv += tk.step) {
+      var gy = Y(gv);
+      svg += "<line x1='" + L + "' y1='" + gy.toFixed(1) + "' x2='" + (W - R) + "' y2='" + gy.toFixed(1) + "' stroke='#E7DCC4' stroke-width='1'/>";
+      svg += "<text x='" + (L - 6) + "' y='" + (gy + 4).toFixed(1) + "' font-size='11' fill='#6B6151' text-anchor='end'>" + df.fmt(gv) + "</text>";
+    }
+    var line = vals.map(function (v, i) { return X(i).toFixed(1) + "," + Y(v).toFixed(1); }).join(" ");
+    svg += "<polyline points='" + line + "' fill='none' stroke='" + df.color + "' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'/>";
+    svg += vals.map(function (v, i) {
+      return "<circle cx='" + X(i).toFixed(1) + "' cy='" + Y(v).toFixed(1) + "' r='3' fill='" + df.color + "'/>";
     }).join("");
-    svg += "<polyline points='" + pts + "' fill='none' stroke='" + s.color + "' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'/>" + dots;
-    svg += "<text x='" + PAD + "' y='" + (14 + si * 15) + "' font-size='11' font-weight='700' fill='" + s.color + "'>" + money(rawMax, s.cur) + "</text>";
+    var labelIdx = [0];
+    if (vals.length > 2) labelIdx.push(Math.floor((vals.length - 1) / 2));
+    if (vals.length > 1) labelIdx.push(vals.length - 1);
+    labelIdx.forEach(function (i) {
+      var anchor = i === 0 ? "start" : (i === vals.length - 1 ? "end" : "middle");
+      svg += "<text x='" + X(i).toFixed(1) + "' y='" + (H - 6) + "' font-size='11' fill='#6B6151' text-anchor='" + anchor + "'>" + shortDateStr(dates[i]) + "</text>";
+    });
+    svg += "</svg>";
+    html += svg;
   });
-  var all = ds().snapshots;
-  if (all.length) {
-    svg += "<text x='" + PAD + "' y='" + (H - 4) + "' font-size='11' fill='#6B6151'>" + esc(all[0].date) + " 〜 " + esc(all[all.length - 1].date) + "</text>";
-  }
-  svg += "</svg>";
-  box.innerHTML = svg;
+  $("chartEmpty").classList.toggle("hidden", any);
+  box.classList.toggle("hidden", !any);
+  box.innerHTML = any ? html : "";
 }
 
 /* ---------- 描画：保有一覧 ---------- */
@@ -1148,7 +1243,7 @@ function renderHoldings() {
   var wrap = $("holdList");
   wrap.innerHTML = "";
   $("holdEmpty").classList.toggle("hidden", list.length > 0);
-  /* 一覧は通貨ごとにグループ分けする。現在値は表示のみ（入力欄は置かない） */
+  /* 一覧は通貨ごとにグループ分けする。v0.5：行には値段系を出さない */
   CURRENCIES.forEach(function (cur) {
     var group = list.filter(function (h) { return curOf(h) === cur; });
     if (!group.length) return;
@@ -1159,25 +1254,16 @@ function renderHoldings() {
     group.forEach(function (h) {
     var div = document.createElement("div");
     div.className = "hold";
-    var p = holdingPnlPct(h);
-    var pctTxt = p == null ? "—" : pctSigned(p);
     var hiddenNote = typeVisible(h.type) ? "" : "<span class='sub'>（設定オフのためホームには出ていません）</span>";
+    /* v0.5：値段系の表記は出さず、名前・種類・数量・証券会社だけのシンプルな表示にする */
     div.innerHTML =
       "<div class='hrow'>" +
         "<span class='hname'>" + esc(h.name) + "</span>" +
         "<span class='type-chip' style='background:" + (TYPES[h.type] ? TYPES[h.type].color : "#8D6E63") + "'>" + (TYPES[h.type] ? TYPES[h.type].label : h.type) + "</span>" +
-        "<span class='hnums'><span class='hval'>" + money(holdingValue(h), cur) + "</span><br>" +
-        "<span class='pnl " + (p == null ? "flat" : pnlClass(p)) + "'>" + moneySigned(holdingValue(h) - holdingCost(h), cur) + "（" + pctTxt + "）</span></span>" +
+        "<span class='hnums'><button type='button' class='btn small' data-edit='" + h.id + "'>編集</button></span>" +
       "</div>" +
-      (h.broker ? "<div class='hbroker'>" + esc(h.broker) + "</div>" : "") +
-      (h.memo ? "<div class='hmemo'>💭 " + esc(h.memo) + "</div>" : "") +
-      (h.yutai ? "<div class='hyutai'>🎁 " + esc(h.yutai) + (h.yutaiMonth ? "（権利月：" + esc(h.yutaiMonth) + "月）" : "") + "</div>" : "") +
-      hiddenNote +
-      "<div class='price-line'>" +
-        "<label>買値 " + money(num(h.buyPrice), cur) + " × " + esc(h.qty) + "</label>" +
-        "<label>現在値 " + money(num(h.curPrice), cur) + "</label>" +
-        "<button type='button' class='btn small' data-edit='" + h.id + "'>編集</button>" +
-      "</div>";
+      "<div class='hbroker'>" + (h.broker ? esc(h.broker) + "／" : "") + "数量 " + esc(h.qty) + "</div>" +
+      hiddenNote;
     wrap.appendChild(div);
     });
   });
@@ -1219,9 +1305,23 @@ function setFormCurrency(cur) {
   $("fCurSeg").querySelectorAll("button").forEach(function (b) {
     b.classList.toggle("on", b.getAttribute("data-cur") === formCurrency);
   });
-  var unit = formCurrency === "USD" ? "$" : "円";
-  $("fBuyLabel").textContent = "買値（単価・" + unit + "）";
+  updateCashForm();
   updateMergeHint();
+}
+/* 種類が現金・預金のときのフォーム調整：数量の欄は「金額（残高）」になり、
+   買値は1で固定する（残高＝数量×1として記録する。手入力でも預金を足せるように） */
+function updateCashForm() {
+  var isCash = ($("fType").value || "jp") === "cash";
+  $("fQtyLabel").textContent = isCash ? "金額（残高）" : "数量";
+  var buy = $("fBuy");
+  if (isCash) {
+    buy.value = "1";
+    buy.disabled = true;
+    $("fBuyLabel").textContent = "買値（現金・預金は1で固定）";
+  } else {
+    buy.disabled = false;
+    $("fBuyLabel").textContent = "買値（単価・" + (formCurrency === "USD" ? "$" : "円") + "）";
+  }
 }
 $("fCurSeg").addEventListener("click", function (ev) {
   var btn = ev.target.closest("[data-cur]");
@@ -1262,7 +1362,7 @@ function updateMergeHint() {
   var show = false;
   if (!state.editingId) {
     var name = $("fName").value.trim();
-    if (name) show = !!findMergeTarget(name, $("fType").value || "jp", formCurrency, $("fBroker") ? $("fBroker").value : "");
+    if (name) show = !!findMergeTarget(name, $("fType").value || "jp", formCurrency, $("fBroker") ? formBrokerValue() : "");
   }
   $("mergeHint").classList.toggle("hidden", !show);
 }
@@ -1284,44 +1384,74 @@ $("fName").addEventListener("change", onNamePicked);
 $("fType").addEventListener("change", function () {
   /* 種類が現金・預金に変わったら、証券会社→金融機関の候補に切り替える */
   renderBrokerOptions($("fBroker").value);
+  updateCashForm();
   updateMergeHint();
 });
-$("fBroker").addEventListener("change", updateMergeHint);
+$("fBroker").addEventListener("change", function () {
+  /* 「＋新しく追加する」を選んだときだけ入力欄を出す */
+  $("fBrokerNewRow").classList.toggle("hidden", $("fBroker").value !== BROKER_ADD_VALUE);
+  updateMergeHint();
+});
 /* 候補にない証券会社・金融機関を自分で追加する（端末内に保存され、次回から選べる） */
 $("fBrokerAddBtn").addEventListener("click", function () {
   var v = $("fBrokerNew").value.trim();
   if (!v) { toast("名前を入れてください"); return; }
-  if (brokerOptionsFor($("fType").value || "jp").indexOf(v) < 0 && BROKER_PRESETS.indexOf(v) < 0 && BANK_PRESETS.indexOf(v) < 0) {
-    state.settings.customBrokers.push(v);
-    saveSettings();
-  }
+  registerCustomBroker(v);
   $("fBrokerNew").value = "";
   renderBrokerOptions(v);
   updateMergeHint();
   toast("候補に追加しました");
 });
-/* 証券会社セレクトを作り直す（種類が現金・預金なら金融機関の候補） */
+/* 証券会社セレクトを作り直す（種類が現金・預金なら金融機関の候補）。
+   v0.5：一番下に「＋ 新しく追加する」を常に入れ、選んだときだけ下の入力欄を出す。
+   「一覧から選ぶ」のか「新しく書き加える」のかが一目で分かるようにするため */
+var BROKER_ADD_VALUE = "__add__";
 function renderBrokerOptions(selected) {
   var sel = $("fBroker");
   var type = $("fType").value || "jp";
   var keep = typeof selected === "string" ? selected : sel.value;
-  $("fBrokerLabel").textContent = type === "cash" ? "金融機関" : "証券会社";
+  $("fBrokerLabel").textContent = type === "cash" ? "金融機関・銀行" : "証券会社";
+  var nl = $("fBrokerNewLabel");
+  if (nl) nl.textContent = type === "cash"
+    ? "新しい金融機関・銀行名を書く（「追加」を押すと上の選択肢に入り、次回からも選べます）"
+    : "新しい証券会社名を書く（「追加」を押すと上の選択肢に入り、次回からも選べます）";
   sel.innerHTML = "";
   var opts = brokerOptionsFor(type);
-  if (keep && opts.indexOf(keep) < 0) opts.push(keep);
+  if (keep && keep !== BROKER_ADD_VALUE && opts.indexOf(keep) < 0) opts.push(keep);
   opts.forEach(function (b) {
     var o = document.createElement("option");
     o.value = b;
     o.textContent = b === "" ? "（未設定）" : b;
     sel.appendChild(o);
   });
+  var addOpt = document.createElement("option");
+  addOpt.value = BROKER_ADD_VALUE;
+  addOpt.textContent = "＋ 新しく追加する";
+  sel.appendChild(addOpt);
   sel.value = keep || "";
+  $("fBrokerNewRow").classList.toggle("hidden", sel.value !== BROKER_ADD_VALUE);
+}
+/* フォームで実際に選ばれている証券会社・金融機関の値。
+   「＋新しく追加する」のときは、入力欄に書かれた名前が値になる */
+function formBrokerValue() {
+  var v = $("fBroker").value || "";
+  if (v === BROKER_ADD_VALUE) return $("fBrokerNew").value.trim();
+  return v;
+}
+/* 自分で追加した候補として登録する（端末内に保存され、次回から選択肢に出る） */
+function registerCustomBroker(v) {
+  if (!v) return;
+  if (BROKER_PRESETS.indexOf(v) >= 0 || BANK_PRESETS.indexOf(v) >= 0) return;
+  if (state.settings.customBrokers.indexOf(v) >= 0) return;
+  state.settings.customBrokers.push(v);
+  saveSettings();
 }
 
 /* ---------- フォーム ---------- */
 function resetForm() {
   state.editingId = null;
   $("holdForm").reset();
+  $("fBrokerNew").value = "";
   renderBrokerOptions("");
   setFormCurrency("JPY");
   $("formTitle").textContent = "保有を追加";
@@ -1348,8 +1478,6 @@ function startEdit(id) {
   $("fBuy").value = h.buyPrice;
   $("fCode").value = h.code || "";
   $("fMemo").value = h.memo || "";
-  $("fYutai").value = h.yutai || "";
-  $("fYutaiMonth").value = h.yutaiMonth || "";
   setFormCurrency(curOf(h));
   $("formTitle").textContent = "保有を編集";
   $("formSaveBtn").textContent = "保存する";
@@ -1362,12 +1490,14 @@ $("holdForm").addEventListener("submit", function (ev) {
   ev.preventDefault();
   var name = $("fName").value.trim();
   if (!name) { toast("名前を入れてください"); return; }
-  var buy = num($("fBuy").value);
   var type = $("fType").value || "jp";
-  var brokerIn = $("fBroker").value || "";
+  /* 現金・預金は買値1で固定（数量＝金額として記録する） */
+  var buy = type === "cash" ? 1 : num($("fBuy").value);
+  var brokerIn = formBrokerValue();
+  /* 「＋新しく追加する」のまま保存したら、書いた名前を候補にも登録しておく */
+  if (brokerIn && $("fBroker").value === BROKER_ADD_VALUE) registerCustomBroker(brokerIn);
   var codeIn = $("fCode").value.trim();
   var memoIn = $("fMemo").value.trim();
-  var yutaiIn = $("fYutai").value.trim();
   var d = ds();
   if (state.editingId) {
     /* v0.4：現在値はフォームでは変えない（既存の値をそのまま引き継ぐ） */
@@ -1384,8 +1514,9 @@ $("holdForm").addEventListener("submit", function (ev) {
       broker: brokerIn,
       code: codeIn,
       memo: memoIn,
-      yutai: yutaiIn,
-      yutaiMonth: $("fYutaiMonth").value
+      /* 優待メモはフォームから外したが、既存の記録は消さずに引き継ぐ */
+      yutai: prev ? (prev.yutai || "") : "",
+      yutaiMonth: prev ? (prev.yutaiMonth || "") : ""
     };
     for (var i = 0; i < d.holdings.length; i++) {
       if (d.holdings[i].id === state.editingId) { d.holdings[i] = rec; break; }
@@ -1407,7 +1538,6 @@ $("holdForm").addEventListener("submit", function (ev) {
       if (!ex.broker && brokerIn) ex.broker = brokerIn;
       if (!ex.code && codeIn) ex.code = codeIn;
       if (memoIn !== "") ex.memo = memoIn;
-      if (yutaiIn !== "") { ex.yutai = yutaiIn; ex.yutaiMonth = $("fYutaiMonth").value; }
       toast("買い増しとして合算しました");
     } else {
       d.holdings.push({
@@ -1421,8 +1551,8 @@ $("holdForm").addEventListener("submit", function (ev) {
         broker: brokerIn,
         code: codeIn,
         memo: memoIn,
-        yutai: yutaiIn,
-        yutaiMonth: $("fYutaiMonth").value
+        yutai: "",
+        yutaiMonth: ""
       });
       toast("追加しました");
     }
