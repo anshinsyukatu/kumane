@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#D84336" />
 <title>くまねー</title>
 <style>
-  /* くまねー v0.6
+  /* くまねー v0.6.1
      配色は家族ルック：背景は白、カードは「くまカラー」#f0dcbc、文字 #3a352d、アクセント #d84336。
      ダークモード対策（恒常ルール）：自分の背景を持つ要素は背景色と文字色を固定値でセット指定し、
      prefers-color-scheme: dark でも同じ値を再指定して反転させない。 */
@@ -375,6 +375,27 @@
     .sim-bar-val{ color:#3A352D; }
     .sim-disclaimer{ color:#6B6151; }
   }
+
+  /* v0.6.1 持株会の内訳100%バー（お試し専用。固定色ペアで指定） */
+  .sim-kpi-grid{ grid-auto-flow:dense; }
+  .sim-break{ grid-column:1 / -1; background:#FFFFFF; color:#3A352D; border:1px solid #DECFA6; border-radius:10px; padding:10px; }
+  .sim-break-title{ font-size:12px; font-weight:800; color:#3A352D; margin-bottom:6px; }
+  .sim-stack{ display:flex; height:22px; border-radius:6px; overflow:hidden; background:#FFFFFF; border:1px solid #DECFA6; }
+  .sim-stack-seg{ height:100%; display:flex; align-items:center; justify-content:center; color:#FFFFFF; font-size:11px; font-weight:700; min-width:0; overflow:hidden; white-space:nowrap; }
+  .sim-break-legend{ margin-top:8px; }
+  .sim-break-row{ display:flex; align-items:center; gap:6px; font-size:12.5px; color:#3A352D; padding:1.5px 0; }
+  .sim-break-dot{ width:11px; height:11px; border-radius:3px; flex:0 0 auto; }
+  .sim-break-name{ flex:1; }
+  .sim-break-amt{ font-weight:800; white-space:nowrap; }
+  .sim-break-pct{ color:#6B6151; min-width:44px; text-align:right; white-space:nowrap; }
+  @media (prefers-color-scheme: dark){
+    .sim-break{ background:#FFFFFF; color:#3A352D; border-color:#DECFA6; }
+    .sim-break-title{ color:#3A352D; }
+    .sim-stack{ background:#FFFFFF; border-color:#DECFA6; }
+    .sim-stack-seg{ color:#FFFFFF; }
+    .sim-break-row{ color:#3A352D; }
+    .sim-break-pct{ color:#6B6151; }
+  }
 </style>
 </head>
 <body>
@@ -382,7 +403,7 @@
 
   <header class="top">
     <h1>くまねー<span class="bear-c" role="img" aria-label="くまま"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.8" cy="5.4" r="2.7" fill="currentColor"/><circle cx="17.2" cy="5.4" r="2.7" fill="currentColor"/><path d="M12 20.8c-4.3 0-7-2.6-7-6.2C5 10.7 8.1 7.5 12 7.5s7 3.2 7 7.1c0 3.6-2.7 6.2-7 6.2Z" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><circle cx="9.4" cy="13.3" r="1.1" fill="currentColor"/><circle cx="14.6" cy="13.3" r="1.1" fill="currentColor"/><path d="M10.1 16.2c.6.5 1.2.8 1.9.8s1.3-.3 1.9-.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span></h1>
-    <span class="ver">v0.6</span>
+    <span class="ver">v0.6.1</span>
   </header>
 
   <!-- モード帯：本番とお試しは別データ。色とバッジで常に区別する -->
@@ -638,6 +659,7 @@
             <div class="kval" id="simKpiSelf">—</div>
             <div class="ksub">ポイント分は含まず</div>
           </div>
+          <div class="sim-break" id="simBreakInvest"></div>
           <div class="sim-kpi">
             <div class="klabel">投資総額（奨励金込）</div>
             <div class="kval" id="simKpiInvest">—</div>
@@ -653,6 +675,7 @@
             <div class="kval" id="simKpiFinal">—</div>
             <div class="ksub" id="simKpiFinalSub">—</div>
           </div>
+          <div class="sim-break" id="simBreakFinal"></div>
           <div class="sim-kpi">
             <div class="klabel">損益（配当再投資込）</div>
             <div class="kval" id="simKpiProfit">—</div>
@@ -788,6 +811,8 @@
 
     <div class="card">
       <h2>更新履歴</h2>
+      <p><strong>v0.6.1</strong><br>
+         ・持株会シミュレーターの結果に、「投資総額の内訳」と「最終評価額の内訳」を100%グラフで追加しました。自己負担・ポイント・奨励金の割合と、投資総額・配当再投資・値上がり分の割合が、金額とあわせて一目で分かります（値下がりしたときは「値下がり分」として表示します）。</p>
       <p><strong>v0.6</strong><br>
          ・お試しに「持株会」タブを追加しました（本番には出ません）。別ページの「持株会シミュレーター」を機能ごと取り込み、銘柄・期間・ボーナス月の追加拠出・積立条件から、配当再投資あり／なしの評価額の推移と、預貯金との比較まで試算できます。<br>
          ・入れた条件はお試しの記録として端末に残り、次に開いたときも残っています。本番の記録には一切混ざりません。</p>
@@ -913,7 +938,7 @@
 <script>
 "use strict";
 /* ============================================================
-   くまねー v0.6
+   くまねー v0.6.1
    - データは localStorage のみ（記録の外部送信なし）
    - 本番（real）とお試し（trial）は別データセットで完全分離
    - 通貨は円（JPY）／ドル（USD）。換算はせず、通貨ごとに完結させる
@@ -2867,6 +2892,77 @@ function simChartSvg(res) {
   return svg;
 }
 
+/* ---------- v0.6.1 内訳の100%積み上げバー（持株会の結果だけに使う） ----------
+   数値はすべて runMochikabuSim の結果から取る（計算モデルは変えない）。
+   simStackParts は純粋関数：parts=[{label,color,value}]（valueは円・生の数値）から、
+   円に丸めた金額・割合・バー幅を作る。金額の合計は Math.round(要素の合計) に一致させ、
+   丸めのズレは adjustIdx の要素（差額で作った要素）で吸収する。
+   割合はバーに入る要素（金額がプラスのもの）だけで100%になるように付ける。
+   マイナスの要素はバーに入れず（inBar:false・pct:null）、凡例で金額だけを示して
+   合計とのつじつまを合わせる（最終評価額の「値下がり分」がこれにあたる） */
+function simStackParts(parts, adjustIdx) {
+  var totalRaw = 0;
+  parts.forEach(function (p) { totalRaw += p.value; });
+  var total = Math.round(totalRaw);
+  var amounts = parts.map(function (p) { return Math.round(p.value); });
+  var sum = amounts.reduce(function (a, b) { return a + b; }, 0);
+  if (amounts.length && sum !== total) {
+    var ai = (typeof adjustIdx === "number" && amounts[adjustIdx] !== undefined) ? adjustIdx : 0;
+    amounts[ai] += total - sum;
+  }
+  var base = 0;
+  amounts.forEach(function (a) { if (a > 0) base += a; });
+  return {
+    total: total,
+    items: parts.map(function (p, i) {
+      var inBar = amounts[i] > 0 && base > 0;
+      return {
+        label: p.label, color: p.color, amount: amounts[i],
+        pct: (amounts[i] >= 0 && base > 0) ? Math.round(amounts[i] / base * 1000) / 10 : null,
+        width: inBar ? amounts[i] / base * 100 : 0,
+        inBar: inBar
+      };
+    })
+  };
+}
+/* 投資総額の内訳：自己負担／ポイント相当分／奨励金（合計＝投資総額） */
+function simInvestBreakdown(res) {
+  var point = res.totalInvest - res.totalSelf - res.totalReward;
+  return simStackParts([
+    { label: "実質自己負担", color: "#D84336", value: res.totalSelf },
+    { label: "ポイント相当分", color: "#FB8C00", value: point },
+    { label: "奨励金", color: "#43A047", value: res.totalReward }
+  ], 1);
+}
+/* 最終評価額の内訳：投資総額／配当再投資／値上がり分（マイナスなら「値下がり分」） */
+function simFinalBreakdown(res) {
+  var gain = res.finalVal - res.totalInvest - res.divFinalVal;
+  return simStackParts([
+    { label: "投資総額", color: "#1E88E5", value: res.totalInvest },
+    { label: "配当再投資", color: "#8E24AA", value: res.divFinalVal },
+    { label: gain < 0 ? "値下がり分" : "値上がり分", color: gain < 0 ? "#607D8B" : "#00ACC1", value: gain }
+  ], 2);
+}
+/* 内訳バーのHTML（バー内ラベルは幅が足りない要素では省略し、凡例で読めるようにする） */
+function simBreakHtml(title, br) {
+  var h = "<div class='sim-break-title'>" + esc(title) + "</div>";
+  h += "<div class='sim-stack'>";
+  br.items.forEach(function (it) {
+    if (!it.inBar) return;
+    var lab = it.width >= 14 ? "<span>" + Math.round(it.pct) + "%</span>" : "";
+    h += "<div class='sim-stack-seg' style='background:" + it.color + ";width:" + it.width.toFixed(1) + "%'>" + lab + "</div>";
+  });
+  h += "</div><div class='sim-break-legend'>";
+  br.items.forEach(function (it) {
+    h += "<div class='sim-break-row'><span class='sim-break-dot' style='background:" + it.color + "'></span>" +
+      "<span class='sim-break-name'>" + esc(it.label) + "</span>" +
+      "<span class='sim-break-amt'>" + yen(it.amount) + "</span>" +
+      "<span class='sim-break-pct'>" + (it.pct === null ? "" : it.pct.toFixed(1) + "%") + "</span></div>";
+  });
+  h += "</div>";
+  return h;
+}
+
 function renderSimResult(res) {
   $("simResCompany").textContent = res.name;
   $("simResPeriod").textContent = res.startYear + "年〜" + res.endYear + "年（" + res.months + "ヶ月間）";
@@ -2884,6 +2980,8 @@ function renderSimResult(res) {
   prof.className = "kval pnl " + pnlClass(res.profit);
   $("simKpiProfitSub").textContent = pctSigned(res.profitRate);
   $("simKpiDivDiff").textContent = yenSigned(res.divEffect);
+  $("simBreakInvest").innerHTML = simBreakHtml("投資総額の内訳", simInvestBreakdown(res));
+  $("simBreakFinal").innerHTML = simBreakHtml("最終評価額の内訳", simFinalBreakdown(res));
   $("simChartBox").innerHTML = simChartSvg(res);
   $("simBarStock").style.width = res.barStock + "%";
   $("simBarNoDiv").style.width = res.barNoDiv + "%";

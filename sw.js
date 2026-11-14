@@ -6,7 +6,7 @@
  */
 "use strict";
 
-var CACHE_VERSION = "v10";
+var CACHE_VERSION = "v11";
 var CACHE_NAME = "kumane-cache-" + CACHE_VERSION;
 
 var PRECACHE_URLS = [
