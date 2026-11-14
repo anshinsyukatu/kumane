@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#D84336" />
 <title>くまねー</title>
 <style>
-  /* くまねー v0.3.2
+  /* くまねー v0.4
      配色は家族ルック：背景は白、カードは「くまカラー」#f0dcbc、文字 #3a352d、アクセント #d84336。
      ダークモード対策（恒常ルール）：自分の背景を持つ要素は背景色と文字色を固定値でセット指定し、
      prefers-color-scheme: dark でも同じ値を再指定して反転させない。 */
@@ -282,6 +282,37 @@
     .fig{ background:#FFFFFF; border-color:#DECFA6; }
     .fig .figcap{ color:#6B6151; }
   }
+
+  /* v0.4 円グラフ・ベストワースト・現在値更新（固定色ペアで指定） */
+  .pie-block{ margin-top:6px; }
+  .pie-flex{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+  .pie-svg{ flex:0 0 auto; }
+  .pie-legend{ flex:1; min-width:170px; }
+  .pie-legend .pl-row{ display:flex; gap:8px; align-items:baseline; padding:2.5px 0; border-top:1px dashed #DECFA6; font-size:13.5px; }
+  .pie-legend .pl-row:first-child{ border-top:0; }
+  .pie-legend .pl-name{ font-weight:700; word-break:break-all; }
+  .pie-legend .pl-broker{ color:#6B6151; font-size:12px; white-space:nowrap; }
+  .pie-legend .pl-pct{ margin-left:auto; font-weight:700; color:#3A352D; white-space:nowrap; }
+  .pie-total{ font-size:13px; color:#6B6151; margin-top:8px; }
+  .bw-flex{ display:flex; gap:14px; flex-wrap:wrap; }
+  .bw-col{ flex:1; min-width:150px; }
+  .bw-col h3{ font-size:13.5px; margin:0 0 4px; color:#3A352D; }
+  .bw-row{ display:flex; gap:8px; align-items:baseline; padding:2.5px 0; border-top:1px dashed #DECFA6; font-size:13.5px; }
+  .bw-row:first-of-type{ border-top:0; }
+  .bw-row .bw-name{ word-break:break-all; }
+  .bw-row .bw-pct{ margin-left:auto; font-weight:800; white-space:nowrap; }
+  .fetch-note{ font-size:12.5px; color:#6B6151; margin-top:6px; }
+  .hold .hbroker{ font-size:12px; color:#6B6151; }
+  @media (prefers-color-scheme: dark){
+    .pie-legend .pl-row{ border-top-color:#DECFA6; }
+    .pie-legend .pl-broker{ color:#6B6151; }
+    .pie-legend .pl-pct{ color:#3A352D; }
+    .pie-total{ color:#6B6151; }
+    .bw-col h3{ color:#3A352D; }
+    .bw-row{ border-top-color:#DECFA6; }
+    .fetch-note{ color:#6B6151; }
+    .hold .hbroker{ color:#6B6151; }
+  }
 </style>
 </head>
 <body>
@@ -289,7 +320,7 @@
 
   <header class="top">
     <h1>くまねー<span class="bear-c" role="img" aria-label="くまま"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.8" cy="5.4" r="2.7" fill="currentColor"/><circle cx="17.2" cy="5.4" r="2.7" fill="currentColor"/><path d="M12 20.8c-4.3 0-7-2.6-7-6.2C5 10.7 8.1 7.5 12 7.5s7 3.2 7 7.1c0 3.6-2.7 6.2-7 6.2Z" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><circle cx="9.4" cy="13.3" r="1.1" fill="currentColor"/><circle cx="14.6" cy="13.3" r="1.1" fill="currentColor"/><path d="M10.1 16.2c.6.5 1.2.8 1.9.8s1.3-.3 1.9-.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span></h1>
-    <span class="ver">v0.3.2</span>
+    <span class="ver">v0.4</span>
   </header>
 
   <!-- モード帯：本番とお試しは別データ。色とバッジで常に区別する -->
@@ -312,7 +343,11 @@
   <!-- ホーム -->
   <section id="tab-home">
     <div class="card">
-      <div id="totalBlocks"></div>
+      <div class="row-flex" style="justify-content:flex-end">
+        <button type="button" class="btn small" id="priceFetchBtn">現在値を更新</button>
+      </div>
+      <div class="fetch-note hidden" id="priceFetchNote"></div>
+      <div id="totalBlocks" class="mt8"></div>
       <div class="trial-capital hidden" id="capitalLine"></div>
       <div id="periodArea"></div>
       <div class="sub mt8" id="snapNote"></div>
@@ -331,9 +366,15 @@
     </div>
 
     <div class="card">
-      <h2>保有（大きさ＝評価額）</h2>
-      <div class="tiles" id="tiles"></div>
-      <div class="empty-note hidden" id="tilesEmpty">まだ保有がありません。</div>
+      <h2>保有の割合（円グラフ）</h2>
+      <div id="pieArea"></div>
+      <div class="empty-note hidden" id="pieEmpty">まだ保有がありません。</div>
+    </div>
+
+    <div class="card">
+      <h2>損益率ベスト・ワースト</h2>
+      <div id="bwArea"></div>
+      <div class="empty-note hidden" id="bwEmpty">まだ計算できる保有がありません。</div>
     </div>
 
     <div class="card">
@@ -385,8 +426,22 @@
             <input type="number" id="fBuy" inputmode="decimal" min="0" step="any" placeholder="2000" />
           </div>
           <div>
-            <label for="fCur" id="fCurLabel">現在値（単価・円）</label>
-            <input type="number" id="fCur" inputmode="decimal" min="0" step="any" placeholder="買値と同じなら空でOK" />
+            <label for="fCode">銘柄コード（任意）</label>
+            <input type="text" id="fCode" placeholder="例：7203／AAPL" autocomplete="off" />
+          </div>
+          <div class="full">
+            <label for="fBroker" id="fBrokerLabel">証券会社</label>
+            <select id="fBroker"></select>
+          </div>
+          <div class="full">
+            <label for="fBrokerNew">候補にない場合（入力して「追加」を押すと次回から選べます）</label>
+            <div class="row-flex">
+              <input type="text" id="fBrokerNew" placeholder="例：○○証券／○○銀行" autocomplete="off" style="flex:1" />
+              <button type="button" class="btn small" id="fBrokerAddBtn">追加</button>
+            </div>
+          </div>
+          <div class="full">
+            <div class="sub">現在値はここでは入力しません。追加した直後は買値と同じ値になり、ホームの「現在値を更新」かCSV取り込みで変わります。</div>
           </div>
           <div class="full">
             <label for="fMemo">なぜ買ったか（一言メモ）</label>
@@ -416,13 +471,10 @@
     </div>
 
     <div class="card">
-      <h2>保有の一覧と現在値の更新</h2>
-      <div class="sub">現在値を入れ直して「更新して記録」を押すと、その日の総評価額が推移グラフに残ります。</div>
+      <h2>保有の一覧</h2>
+      <div class="sub">現在値は表示だけです。ホームの「現在値を更新」（コードのある日本株・米国株）か、CSV取り込みで変わります。</div>
       <div id="holdList"></div>
       <div class="empty-note hidden" id="holdEmpty">まだ保有がありません。</div>
-      <div class="row-flex mt12">
-        <button type="button" class="btn primary" id="priceUpdateBtn">更新して記録</button>
-      </div>
     </div>
   </section>
 
@@ -459,7 +511,11 @@
 
     <div class="card hidden" id="brokerPreviewCard">
       <h2>取り込みの確認（楽天証券の保有）</h2>
-      <div class="sub" id="brokerPreviewNote"></div>
+      <div class="row-flex">
+        <button type="button" class="btn primary" id="brokerApplyBtnTop">この内容で取り込む</button>
+        <button type="button" class="btn" id="brokerCancelBtnTop">やめる</button>
+      </div>
+      <div class="sub mt8" id="brokerPreviewNote"></div>
       <div id="brokerPreviewList"></div>
       <div class="row-flex mt12">
         <button type="button" class="btn primary" id="brokerApplyBtn">この内容で取り込む</button>
@@ -491,14 +547,30 @@
     <div class="card">
       <h2>くまねーについて</h2>
       <p>買った値段と今の値段を記録して、含み損益や資産の推移を眺めるための、小さな記録アプリです。</p>
-      <p>・現在値は手入力だけです。株価などを自動で取りに行くことはしません。<br>
+      <p>・現在値は、ホームの「現在値を更新」ボタンでまとめて更新できます（銘柄コードのある日本株・米国株だけ。株価は外部サイト stooq の終値で、遅れて表示されることがあります）。投資信託・債券・現金は対象外で、CSV取り込みや買値のままになります。<br>
          ・ドル建てはドルで記録します。円への換算はしません。<br>
-         ・楽天証券のCSV（保有・配当）を取り込めます。保有CSVからは、預り金・外貨預り金・楽天銀行の預金も「現金・預金」として取り込みます。取り込みで、手で書いたメモが消えることはありません。野村證券は準備中です。<br>
+         ・楽天証券のCSV（保有・配当）を取り込めます。保有CSVからは、預り金・外貨預り金・楽天銀行の預金も「現金・預金」として取り込みます。取り込みで、手で書いたメモが消えることはありません。配当の取り込みで保有が変わることはありません。野村證券は準備中です。<br>
+         ・保有には証券会社（現金・預金は金融機関）を付けられます。楽天のCSVから取り込むと自動で付きます。<br>
          ・同じ名前・種類・通貨の保有を追加すると、買い増しとして合算されます（買値は平均取得単価になります）。<br>
          ・「本番」と「お試し」は記録が完全に分かれています。お試しは、元手を決めて「買ったつもり」で練習できます。<br>
          ・現在値を更新すると、その日の総評価額が記録され、推移グラフと週・月・年の収支に使われます。<br>
          ・記録はこの端末の中だけに保存されます。外部に送信されることはありません。機種変更やブラウザのデータ消去で消えることがあるので、CSVの書き出しがおすすめです。</p>
       <p><strong>このアプリは記録と試算のための道具です。投資の助言はしません。</strong></p>
+    </div>
+
+    <div class="card">
+      <h2>更新履歴</h2>
+      <p><strong>v0.4</strong><br>
+         ・配当CSVを取り込むと保有の現在値が0になることがある問題を直しました（配当の取り込みでは保有は一切変わりません）。<br>
+         ・ホームに「現在値を更新」ボタンを追加（コードのある日本株・米国株の終値をまとめて取得。投資信託・債券・現金は対象外）。<br>
+         ・保有の割合を円グラフに変更（円とドルは別々。凡例は評価額の大きい順で、文字の色が種類の色）。損益率のベスト5・ワースト5を追加。<br>
+         ・保有に証券会社（現金・預金は金融機関）を付けられるようにしました。楽天CSVからは自動で付きます。<br>
+         ・保有の画面から現在値の入力欄をなくしました（現在値は表示だけ）。<br>
+         ・資産の推移グラフが0から始まるようにしました。<br>
+         ・取り込み確認の「この内容で取り込む」ボタンを上にも置きました。</p>
+      <p><strong>v0.3.2</strong>：現金・預金（楽天の預り金・外貨預り金・楽天銀行の残高）も取り込めるようにしました。<br>
+         <strong>v0.3.1</strong>：楽天の実際の保有CSVの形に合わせて読み取りを直しました。<br>
+         <strong>v0.3</strong>：楽天証券のCSV（保有・配当）の取り込みに対応しました。</p>
     </div>
 
     <div class="card">
@@ -599,12 +671,17 @@
 <script>
 "use strict";
 /* ============================================================
-   くまねー v0.3
-   - データは localStorage のみ（外部送信なし・外部APIなし）
+   くまねー v0.4
+   - データは localStorage のみ（記録の外部送信なし）
    - 本番（real）とお試し（trial）は別データセットで完全分離
    - 通貨は円（JPY）／ドル（USD）。換算はせず、通貨ごとに完結させる
    - スナップショット：現在値を保存した日の総評価額を通貨別に日付つきで記録
+   - v0.4：ホームの「現在値を更新」だけが、銘柄コードのある日本株・米国株の
+     終値を stooq から取得する（送信するのは銘柄コードだけ。記録は送らない）。
+     直接取得できない環境向けに Worker プロキシを使う場合は PRICE_PROXY_URL に
+     プロキシのURLを入れる（空の間は直接取得。プロキシのコードは worker-price-proxy.js）
    ============================================================ */
+var PRICE_PROXY_URL = "";
 
 var TYPES = {
   jp:      { label: "日本株",   color: "#D84336" },
@@ -635,6 +712,11 @@ function loadDataset(which) {
     /* v0.2 移行：通貨が無い保有は「円」。スナップショットの旧 total は円の値として引き継ぐ
        （ドルの履歴は無いので usd は未定義のまま＝推移・期間収支のドル計算からは除外される） */
     d.holdings.forEach(function (h) { if (h.currency !== "USD") h.currency = "JPY"; });
+    /* v0.4 移行：証券会社（broker）と銘柄コード（code）が無い保有には空文字を足す（記録は消さない） */
+    d.holdings.forEach(function (h) {
+      if (typeof h.broker !== "string") h.broker = "";
+      if (typeof h.code !== "string") h.code = "";
+    });
     d.snapshots.forEach(function (s) {
       if (typeof s.jpy !== "number") s.jpy = num(s.total);
       if ("total" in s) delete s.total;
@@ -648,8 +730,21 @@ function saveDataset(which) {
 function loadSettings() {
   try {
     var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
-    return { useExtra: !!s.useExtra };
-  } catch (e) { return { useExtra: false }; }
+    /* v0.4：自分で追加した証券会社・金融機関の候補（端末内に保存） */
+    var customs = Array.isArray(s.customBrokers) ? s.customBrokers.filter(function (x) { return typeof x === "string" && x; }) : [];
+    return { useExtra: !!s.useExtra, customBrokers: customs };
+  } catch (e) { return { useExtra: false, customBrokers: [] }; }
+}
+
+/* ---------- 証券会社・金融機関の候補 ---------- */
+var BROKER_PRESETS = ["楽天証券", "野村證券", "会社の持株会", "確定拠出年金", "その他"];
+var BANK_PRESETS = ["楽天銀行", "ゆうちょ銀行", "その他"];
+function brokerPresetsFor(type) { return type === "cash" ? BANK_PRESETS : BROKER_PRESETS; }
+function brokerOptionsFor(type) {
+  var out = [""];
+  brokerPresetsFor(type).forEach(function (b) { if (out.indexOf(b) < 0) out.push(b); });
+  (state.settings.customBrokers || []).forEach(function (b) { if (out.indexOf(b) < 0) out.push(b); });
+  return out;
 }
 function saveSettings() {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings)); } catch (e) {}
@@ -863,7 +958,8 @@ function renderHome() {
 
   renderBand(list, tc);
   renderChart();
-  renderTiles(list, tc);
+  renderPie(list, tc);
+  renderBestWorst(list);
 }
 
 /* 横帯グラフ：通貨ごとに1本（割合はその通貨の中での割合） */
@@ -905,30 +1001,92 @@ function renderBand(list, tc) {
   $("bandEmpty").classList.toggle("hidden", any);
 }
 
-/* タイル：大きさ＝評価額（同じ通貨の中での比）、金額はその銘柄の通貨で表示 */
-function renderTiles(list, tc) {
-  var tiles = $("tiles");
-  tiles.innerHTML = "";
-  $("tilesEmpty").classList.toggle("hidden", list.length > 0);
+/* 円グラフ：通貨ごとに1つ（円とドルは絶対に混ぜない）。
+   スライスの色も凡例の文字色も「種類の色」。凡例は評価額の大きい順で、名前＋証券会社だけ
+   （個別の金額は出さず、合計だけを数字で出す） */
+function pieSlicePath(cx, cy, r, a0, a1) {
+  var x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
+  var x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+  var large = (a1 - a0) > Math.PI ? 1 : 0;
+  return "M" + cx + "," + cy + " L" + x0.toFixed(1) + "," + y0.toFixed(1) +
+    " A" + r + "," + r + " 0 " + large + " 1 " + x1.toFixed(1) + "," + y1.toFixed(1) + " Z";
+}
+function renderPie(list, tc) {
+  var area = $("pieArea");
+  area.innerHTML = "";
+  var any = false;
   CURRENCIES.forEach(function (cur) {
-    var group = list.filter(function (h) { return curOf(h) === cur; })
+    var group = list.filter(function (h) { return curOf(h) === cur && holdingValue(h) > 0; })
       .sort(function (a, b) { return holdingValue(b) - holdingValue(a); });
-    var total = Math.max(1, tc[cur].value);
+    var total = tc[cur].value;
+    if (!group.length || total <= 0) return;
+    any = true;
+    var block = document.createElement("div");
+    block.className = "pie-block";
+    var R = 74, C = 80;
+    var svg = "<svg class='pie-svg' width='160' height='160' viewBox='0 0 160 160' role='img' aria-label='保有の割合（" + (cur === "USD" ? "ドル" : "円") + "）'>";
+    var angle = -Math.PI / 2;
     group.forEach(function (h) {
-      var tile = document.createElement("div");
-      tile.className = "tile";
-      tile.style.background = TYPES[h.type] ? TYPES[h.type].color : "#8D6E63";
-      tile.style.flexGrow = String(Math.max(1, Math.round(holdingValue(h) / total * 100)));
-      tile.style.flexBasis = "104px";
-      var p = holdingPnlPct(h);
-      var pctTxt = p == null ? "—" : pctSigned(p);
-      var cls = p == null ? "flat" : pnlClass(p);
-      tile.innerHTML = "<div class='tname'>" + esc(h.name) + "</div>" +
-        "<div class='tval'>" + money(holdingValue(h), cur) + "</div>" +
-        "<span class='tpct " + cls + "'>" + pctTxt + "</span>";
-      tiles.appendChild(tile);
+      var frac = holdingValue(h) / total;
+      var a1 = angle + frac * Math.PI * 2;
+      var color = TYPES[h.type] ? TYPES[h.type].color : "#8D6E63";
+      if (group.length === 1 || frac >= 0.999) {
+        svg += "<circle cx='" + C + "' cy='" + C + "' r='" + R + "' fill='" + color + "'/>";
+      } else {
+        svg += "<path d='" + pieSlicePath(C, C, R, angle, a1) + "' fill='" + color + "' stroke='#FFFFFF' stroke-width='1.6'/>";
+      }
+      angle = a1;
     });
+    svg += "</svg>";
+    var legend = group.map(function (h) {
+      var color = TYPES[h.type] ? TYPES[h.type].color : "#8D6E63";
+      var pct = Math.round(holdingValue(h) / total * 1000) / 10;
+      return "<div class='pl-row'><span class='pl-name' style='color:" + color + "'>" + esc(h.name) + "</span>" +
+        (h.broker ? "<span class='pl-broker'>" + esc(h.broker) + "</span>" : "") +
+        "<span class='pl-pct'>" + pct + "%</span></div>";
+    }).join("");
+    block.innerHTML =
+      "<div class='band-cur'>" + curSymbol(cur) + "</div>" +
+      "<div class='pie-flex'>" + svg + "<div class='pie-legend'>" + legend + "</div></div>" +
+      "<div class='pie-total'>合計 " + money(total, cur) + "</div>";
+    area.appendChild(block);
   });
+  $("pieEmpty").classList.toggle("hidden", any);
+}
+
+/* 損益率のベスト5・ワースト5（％は通貨をまたいでも比べられる。現金・預金は対象外） */
+function bestWorst(list) {
+  var cand = [];
+  list.forEach(function (h) {
+    if (h.type === "cash") return;
+    var p = holdingPnlPct(h);
+    if (p == null) return;
+    cand.push({ name: h.name, pct: p });
+  });
+  cand.sort(function (a, b) { return b.pct - a.pct; });
+  var best = cand.slice(0, 5);
+  var rest = cand.slice(best.length);
+  var worst = rest.slice(-5).reverse();
+  return { best: best, worst: worst };
+}
+function renderBestWorst(list) {
+  var area = $("bwArea");
+  area.innerHTML = "";
+  var bw = bestWorst(list);
+  $("bwEmpty").classList.toggle("hidden", bw.best.length > 0);
+  if (!bw.best.length) return;
+  function rows(items) {
+    return items.map(function (it) {
+      return "<div class='bw-row'><span class='bw-name'>" + esc(it.name) + "</span>" +
+        "<span class='bw-pct pnl " + pnlClass(it.pct) + "'>" + pctSigned(it.pct) + "</span></div>";
+    }).join("");
+  }
+  var wrap = document.createElement("div");
+  wrap.className = "bw-flex";
+  wrap.innerHTML =
+    "<div class='bw-col'><h3>ベスト5</h3>" + rows(bw.best) + "</div>" +
+    (bw.worst.length ? "<div class='bw-col'><h3>ワースト5</h3>" + rows(bw.worst) + "</div>" : "");
+  area.appendChild(wrap);
 }
 
 /* 推移グラフ：通貨ごとに線を分ける。円とドルは桁が違うので、縦軸は通貨ごとに正規化する
@@ -945,15 +1103,19 @@ function renderChart() {
   var W = 640, H = 180, PAD = 8;
   var svg = "<svg viewBox='0 0 " + W + " " + H + "' role='img' aria-label='資産推移グラフ'>";
   series.forEach(function (s, si) {
-    var vals = s.pts.map(function (p) { return p[s.key]; });
-    var rawMax = Math.max.apply(null, vals);
-    var min = Math.min.apply(null, vals), max = rawMax;
+    /* v0.4：初回スナップショットの前日に「値0」の起点を置き、0から右へ伸びる形にする
+       （起点はグラフ描画だけのもので、スナップショットの記録自体には入れない） */
+    var disp = s.pts.map(function (p) { return p[s.key]; });
+    if (disp.length) disp = [0].concat(disp);
+    var vals = disp;
+    var rawMax = Math.max.apply(null, s.pts.map(function (p) { return p[s.key]; }));
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
     if (min === max) { min -= 1; max += 1; }
-    var x = function (i) { return s.pts.length === 1 ? W / 2 : PAD + (W - PAD * 2) * i / (s.pts.length - 1); };
+    var x = function (i) { return disp.length === 1 ? W / 2 : PAD + (W - PAD * 2) * i / (disp.length - 1); };
     var y = function (v) { return H - 22 - (H - 56) * (v - min) / (max - min); };
-    var pts = s.pts.map(function (p, i) { return x(i).toFixed(1) + "," + y(p[s.key]).toFixed(1); }).join(" ");
-    var dots = s.pts.map(function (p, i) {
-      return "<circle cx='" + x(i).toFixed(1) + "' cy='" + y(p[s.key]).toFixed(1) + "' r='3' fill='" + s.color + "'/>";
+    var pts = disp.map(function (v, i) { return x(i).toFixed(1) + "," + y(v).toFixed(1); }).join(" ");
+    var dots = disp.map(function (v, i) {
+      return "<circle cx='" + x(i).toFixed(1) + "' cy='" + y(v).toFixed(1) + "' r='3' fill='" + s.color + "'/>";
     }).join("");
     svg += "<polyline points='" + pts + "' fill='none' stroke='" + s.color + "' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'/>" + dots;
     svg += "<text x='" + PAD + "' y='" + (14 + si * 15) + "' font-size='11' font-weight='700' fill='" + s.color + "'>" + money(rawMax, s.cur) + "</text>";
@@ -986,8 +1148,7 @@ function renderHoldings() {
   var wrap = $("holdList");
   wrap.innerHTML = "";
   $("holdEmpty").classList.toggle("hidden", list.length > 0);
-  $("priceUpdateBtn").disabled = list.length === 0;
-  /* 現在値の更新は通貨ごとにグループ分けする */
+  /* 一覧は通貨ごとにグループ分けする。現在値は表示のみ（入力欄は置かない） */
   CURRENCIES.forEach(function (cur) {
     var group = list.filter(function (h) { return curOf(h) === cur; });
     if (!group.length) return;
@@ -1008,14 +1169,13 @@ function renderHoldings() {
         "<span class='hnums'><span class='hval'>" + money(holdingValue(h), cur) + "</span><br>" +
         "<span class='pnl " + (p == null ? "flat" : pnlClass(p)) + "'>" + moneySigned(holdingValue(h) - holdingCost(h), cur) + "（" + pctTxt + "）</span></span>" +
       "</div>" +
+      (h.broker ? "<div class='hbroker'>" + esc(h.broker) + "</div>" : "") +
       (h.memo ? "<div class='hmemo'>💭 " + esc(h.memo) + "</div>" : "") +
       (h.yutai ? "<div class='hyutai'>🎁 " + esc(h.yutai) + (h.yutaiMonth ? "（権利月：" + esc(h.yutaiMonth) + "月）" : "") + "</div>" : "") +
       hiddenNote +
       "<div class='price-line'>" +
         "<label>買値 " + money(num(h.buyPrice), cur) + " × " + esc(h.qty) + "</label>" +
-        "<label>現在値</label>" +
-        "<input type='number' inputmode='decimal' min='0' step='any' value='" + esc(h.curPrice) + "' data-price-for='" + h.id + "' style='width:120px' />" +
-        "<span>" + (cur === "USD" ? "$" : "円") + "</span>" +
+        "<label>現在値 " + money(num(h.curPrice), cur) + "</label>" +
         "<button type='button' class='btn small' data-edit='" + h.id + "'>編集</button>" +
       "</div>";
     wrap.appendChild(div);
@@ -1033,6 +1193,8 @@ function renderHoldings() {
     sel.appendChild(o);
   });
   if (cur && typeVisible(cur)) sel.value = cur;
+  /* 証券会社セレクトも今の選択を保ったまま作り直す */
+  renderBrokerOptions($("fBroker").value);
   /* データタブの注記 */
   var hiddenCount = ds().holdings.filter(function (h) { return !typeVisible(h.type); }).length;
   var note = $("hiddenCountNote");
@@ -1059,7 +1221,6 @@ function setFormCurrency(cur) {
   });
   var unit = formCurrency === "USD" ? "$" : "円";
   $("fBuyLabel").textContent = "買値（単価・" + unit + "）";
-  $("fCurLabel").textContent = "現在値（単価・" + unit + "）";
   updateMergeHint();
 }
 $("fCurSeg").addEventListener("click", function (ev) {
@@ -1072,11 +1233,17 @@ function findByName(name) {
   ds().holdings.forEach(function (h) { if (h.name === name && !found) found = h; });
   return found;
 }
-/* 買い増し合算の対象（名前・種類・通貨がすべて一致する既存保有） */
-function findMergeTarget(name, type, cur) {
+/* 買い増し合算の対象（名前・種類・通貨がすべて一致する既存保有）。
+   v0.4：証券会社も見る。ただし、どちらかが未設定（空）なら合算の対象にする
+   （v0.3以前の記録は証券会社が空なので、取り込みで重複を作らないため）。
+   両方に証券会社が付いていて食い違う場合は、別の保有として扱う */
+function findMergeTarget(name, type, cur, broker) {
   var found = null;
   ds().holdings.forEach(function (h) {
-    if (!found && h.name === name && h.type === type && curOf(h) === cur) found = h;
+    if (found) return;
+    if (h.name !== name || h.type !== type || curOf(h) !== cur) return;
+    if (broker && h.broker && h.broker !== broker) return;
+    found = h;
   });
   return found;
 }
@@ -1095,29 +1262,67 @@ function updateMergeHint() {
   var show = false;
   if (!state.editingId) {
     var name = $("fName").value.trim();
-    if (name) show = !!findMergeTarget(name, $("fType").value || "jp", formCurrency);
+    if (name) show = !!findMergeTarget(name, $("fType").value || "jp", formCurrency, $("fBroker") ? $("fBroker").value : "");
   }
   $("mergeHint").classList.toggle("hidden", !show);
 }
-/* 候補から既存銘柄を選んだら、その銘柄の種類・通貨をフォームに反映する */
+/* 候補から既存銘柄を選んだら、その銘柄の種類・通貨・証券会社をフォームに反映する */
 function onNamePicked() {
   if (state.editingId) { updateMergeHint(); return; }
   var h = findByName($("fName").value.trim());
   if (h) {
     ensureTypeOption(h.type);
     $("fType").value = h.type;
+    renderBrokerOptions(h.broker || "");
     setFormCurrency(curOf(h));
+    if (h.code && !$("fCode").value) $("fCode").value = h.code;
   }
   updateMergeHint();
 }
 $("fName").addEventListener("input", onNamePicked);
 $("fName").addEventListener("change", onNamePicked);
-$("fType").addEventListener("change", updateMergeHint);
+$("fType").addEventListener("change", function () {
+  /* 種類が現金・預金に変わったら、証券会社→金融機関の候補に切り替える */
+  renderBrokerOptions($("fBroker").value);
+  updateMergeHint();
+});
+$("fBroker").addEventListener("change", updateMergeHint);
+/* 候補にない証券会社・金融機関を自分で追加する（端末内に保存され、次回から選べる） */
+$("fBrokerAddBtn").addEventListener("click", function () {
+  var v = $("fBrokerNew").value.trim();
+  if (!v) { toast("名前を入れてください"); return; }
+  if (brokerOptionsFor($("fType").value || "jp").indexOf(v) < 0 && BROKER_PRESETS.indexOf(v) < 0 && BANK_PRESETS.indexOf(v) < 0) {
+    state.settings.customBrokers.push(v);
+    saveSettings();
+  }
+  $("fBrokerNew").value = "";
+  renderBrokerOptions(v);
+  updateMergeHint();
+  toast("候補に追加しました");
+});
+/* 証券会社セレクトを作り直す（種類が現金・預金なら金融機関の候補） */
+function renderBrokerOptions(selected) {
+  var sel = $("fBroker");
+  var type = $("fType").value || "jp";
+  var keep = typeof selected === "string" ? selected : sel.value;
+  $("fBrokerLabel").textContent = type === "cash" ? "金融機関" : "証券会社";
+  sel.innerHTML = "";
+  var opts = brokerOptionsFor(type);
+  if (keep && opts.indexOf(keep) < 0) opts.push(keep);
+  opts.forEach(function (b) {
+    var o = document.createElement("option");
+    o.value = b;
+    o.textContent = b === "" ? "（未設定）" : b;
+    sel.appendChild(o);
+  });
+  sel.value = keep || "";
+}
 
 /* ---------- フォーム ---------- */
 function resetForm() {
   state.editingId = null;
   $("holdForm").reset();
+  renderBrokerOptions("");
   setFormCurrency("JPY");
   $("formTitle").textContent = "保有を追加";
   $("formSaveBtn").textContent = "追加する";
@@ -1138,9 +1343,10 @@ function startEdit(id) {
   }
   $("fName").value = h.name || "";
   sel.value = h.type;
+  renderBrokerOptions(h.broker || "");
   $("fQty").value = h.qty;
   $("fBuy").value = h.buyPrice;
-  $("fCur").value = h.curPrice;
+  $("fCode").value = h.code || "";
   $("fMemo").value = h.memo || "";
   $("fYutai").value = h.yutai || "";
   $("fYutaiMonth").value = h.yutaiMonth || "";
@@ -1157,12 +1363,16 @@ $("holdForm").addEventListener("submit", function (ev) {
   var name = $("fName").value.trim();
   if (!name) { toast("名前を入れてください"); return; }
   var buy = num($("fBuy").value);
-  var curInput = $("fCur").value;
   var type = $("fType").value || "jp";
+  var brokerIn = $("fBroker").value || "";
+  var codeIn = $("fCode").value.trim();
   var memoIn = $("fMemo").value.trim();
   var yutaiIn = $("fYutai").value.trim();
   var d = ds();
   if (state.editingId) {
+    /* v0.4：現在値はフォームでは変えない（既存の値をそのまま引き継ぐ） */
+    var prev = null;
+    d.holdings.forEach(function (x) { if (x.id === state.editingId) prev = x; });
     var rec = {
       id: state.editingId,
       name: name,
@@ -1170,7 +1380,9 @@ $("holdForm").addEventListener("submit", function (ev) {
       currency: formCurrency,
       qty: num($("fQty").value),
       buyPrice: buy,
-      curPrice: curInput === "" ? buy : num(curInput),
+      curPrice: prev ? num(prev.curPrice) : buy,
+      broker: brokerIn,
+      code: codeIn,
       memo: memoIn,
       yutai: yutaiIn,
       yutaiMonth: $("fYutaiMonth").value
@@ -1180,8 +1392,8 @@ $("holdForm").addEventListener("submit", function (ev) {
     }
     toast("保存しました");
   } else {
-    /* 買い増し：名前・種類・通貨がすべて一致する既存保有があれば、新規を作らず合算する */
-    var ex = findMergeTarget(name, type, formCurrency);
+    /* 買い増し：名前・種類・通貨（＋証券会社）が一致する既存保有があれば、新規を作らず合算する */
+    var ex = findMergeTarget(name, type, formCurrency, brokerIn);
     if (ex) {
       var addQty = num($("fQty").value);
       var oldQty = num(ex.qty);
@@ -1191,7 +1403,9 @@ $("holdForm").addEventListener("submit", function (ev) {
         ? Math.round(((num(ex.buyPrice) * oldQty + buy * addQty) / totalQty) * 100) / 100
         : buy;
       ex.qty = totalQty;
-      if (curInput !== "") ex.curPrice = num(curInput);
+      /* 現在値は合算では変えない。証券会社・コードが空なら、入力された方で補う */
+      if (!ex.broker && brokerIn) ex.broker = brokerIn;
+      if (!ex.code && codeIn) ex.code = codeIn;
       if (memoIn !== "") ex.memo = memoIn;
       if (yutaiIn !== "") { ex.yutai = yutaiIn; ex.yutaiMonth = $("fYutaiMonth").value; }
       toast("買い増しとして合算しました");
@@ -1203,7 +1417,9 @@ $("holdForm").addEventListener("submit", function (ev) {
         currency: formCurrency,
         qty: num($("fQty").value),
         buyPrice: buy,
-        curPrice: curInput === "" ? buy : num(curInput),
+        curPrice: buy,
+        broker: brokerIn,
+        code: codeIn,
         memo: memoIn,
         yutai: yutaiIn,
         yutaiMonth: $("fYutaiMonth").value
@@ -1229,18 +1445,91 @@ $("formDeleteBtn").addEventListener("click", function () {
   toast("削除しました");
 });
 
-/* ---------- 現在値の一括更新 ---------- */
-$("priceUpdateBtn").addEventListener("click", function () {
-  var inputs = document.querySelectorAll("[data-price-for]");
-  var d = ds();
-  inputs.forEach(function (inp) {
-    var id = inp.getAttribute("data-price-for");
-    d.holdings.forEach(function (h) { if (h.id === id) h.curPrice = num(inp.value); });
+/* ---------- 現在値の一括更新（ホームのボタン） ---------- */
+/* 銘柄コードのある日本株・米国株だけ、外部サイト stooq の終値を取りに行く。
+   送るのは銘柄コードだけで、記録の内容は送らない。取れなかった分は件数で正直に出す。
+   投資信託・債券・現金と、コードの無い保有は対象外（CSV取り込み等で更新する）。
+   直接つながらない環境では PRICE_PROXY_URL（Workerプロキシ）経由に切り替えられる */
+function stooqSymbolFor(h) {
+  var code = String(h.code || "").trim();
+  if (!code) return null;
+  if (h.type === "jp") return code.toLowerCase() + ".jp";
+  if (h.type === "foreign") return code.toLowerCase() + ".us";
+  return null;
+}
+function priceUrl(symbol) {
+  if (PRICE_PROXY_URL) return PRICE_PROXY_URL + "?s=" + encodeURIComponent(symbol);
+  return "https://stooq.com/q/l/?s=" + encodeURIComponent(symbol) + "&f=c&h&e=csv";
+}
+function fetchClose(symbol) {
+  var ctrl = null, timer = null, p;
+  try {
+    if (typeof AbortController !== "undefined" && typeof fetch !== "undefined") {
+      ctrl = new AbortController();
+      timer = setTimeout(function () { ctrl.abort(); }, 12000);
+      p = fetch(priceUrl(symbol), { signal: ctrl.signal });
+    } else {
+      p = fetch(priceUrl(symbol));
+    }
+  } catch (e) { return Promise.resolve(null); }
+  return p.then(function (res) {
+    if (timer) clearTimeout(timer);
+    if (!res || !res.ok) return null;
+    return res.text();
+  }).then(function (text) {
+    if (typeof text !== "string") return null;
+    var lines = text.split(/\r?\n/);
+    for (var i = 1; i < lines.length; i++) {
+      var v = parseNumLoose(lines[i]);
+      if (v != null) return v;
+    }
+    return null;
+  }).catch(function () { if (timer) clearTimeout(timer); return null; });
+}
+$("priceFetchBtn").addEventListener("click", function () {
+  var btn = $("priceFetchBtn");
+  if (btn.disabled) return;
+  var targets = [], noCode = 0;
+  ds().holdings.forEach(function (h) {
+    var sym = stooqSymbolFor(h);
+    if (sym) targets.push({ h: h, symbol: sym });
+    else if (h.type === "jp" || h.type === "foreign") noCode++;
   });
-  recordSnapshot();
-  saveDataset(state.mode);
-  renderAll();
-  toast("今日の総評価額を記録しました");
+  var note = $("priceFetchNote");
+  note.classList.remove("hidden");
+  if (!targets.length) {
+    note.textContent = "更新できる保有がありませんでした。銘柄コードのある日本株・米国株が対象です（投資信託・債券・現金は対象外）。";
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "更新中…";
+  note.textContent = "株価を取りに行っています…";
+  var ok = 0, ng = 0;
+  var chain = Promise.resolve();
+  targets.forEach(function (t) {
+    chain = chain.then(function () {
+      return fetchClose(t.symbol).then(function (v) {
+        if (v != null && v > 0) { t.h.curPrice = v; ok++; } else ng++;
+      });
+    });
+  });
+  chain.then(function () {
+    btn.disabled = false;
+    btn.textContent = "現在値を更新";
+    if (ok > 0) {
+      recordSnapshot();
+      saveDataset(state.mode);
+      renderAll();
+    }
+    var msg = ok > 0
+      ? "現在値を更新しました（" + ok + "件）。"
+      : "現在値を更新できませんでした。";
+    if (ng > 0) msg += " 取れなかったものが " + ng + " 件あります。";
+    if (noCode > 0) msg += " コードのない株 " + noCode + " 件はそのままです。";
+    msg += " 投資信託・債券・現金は対象外です。株価は stooq の終値で、遅れて表示されることがあります。";
+    $("priceFetchNote").textContent = msg;
+    if (ok > 0) toast("現在値を更新しました（" + ok + "件）");
+  });
 });
 $("holdList").addEventListener("click", function (ev) {
   var btn = ev.target.closest("[data-edit]");
@@ -1295,19 +1584,21 @@ function csvCell(v) {
 }
 function buildCsv() {
   var lines = [];
-  lines.push(["kind", "mode", "date_or_name", "type", "currency", "buy_price", "qty", "cur_price", "memo", "yutai", "yutai_month", "total", "total_usd"].join(","));
+  /* v0.4：末尾に broker 列（証券会社）と code 列（銘柄コード）を追加。旧CSVには無い列なので、
+     列が無いファイルを読んでも壊れない（ヘッダー名で引くため） */
+  lines.push(["kind", "mode", "date_or_name", "type", "currency", "buy_price", "qty", "cur_price", "memo", "yutai", "yutai_month", "total", "total_usd", "broker", "code"].join(","));
   ["real", "trial"].forEach(function (m) {
     var d = state.data[m];
-    lines.push(["meta", m, "capital", "", "", "", "", "", "", "", "", d.capital, ""].map(csvCell).join(","));
+    lines.push(["meta", m, "capital", "", "", "", "", "", "", "", "", d.capital, "", "", ""].map(csvCell).join(","));
     d.holdings.forEach(function (h) {
-      lines.push(["holding", m, h.name, h.type, curOf(h), h.buyPrice, h.qty, h.curPrice, h.memo || "", h.yutai || "", h.yutaiMonth || "", "", ""].map(csvCell).join(","));
+      lines.push(["holding", m, h.name, h.type, curOf(h), h.buyPrice, h.qty, h.curPrice, h.memo || "", h.yutai || "", h.yutaiMonth || "", "", "", h.broker || "", h.code || ""].map(csvCell).join(","));
     });
     d.snapshots.forEach(function (s) {
-      lines.push(["snapshot", m, s.date, "", "", "", "", "", "", "", "", s.jpy, typeof s.usd === "number" ? s.usd : ""].map(csvCell).join(","));
+      lines.push(["snapshot", m, s.date, "", "", "", "", "", "", "", "", s.jpy, typeof s.usd === "number" ? s.usd : "", "", ""].map(csvCell).join(","));
     });
     /* v0.3：配当の記録も往復させる（名前は memo 列、金額は total 列に置く） */
     (d.dividends || []).forEach(function (dv) {
-      lines.push(["dividend", m, dv.date, "", dv.currency, "", "", "", dv.name, "", "", dv.amount, ""].map(csvCell).join(","));
+      lines.push(["dividend", m, dv.date, "", dv.currency, "", "", "", dv.name, "", "", dv.amount, "", "", ""].map(csvCell).join(","));
     });
   });
   return lines.join("\n") + "\n";
@@ -1372,7 +1663,8 @@ $("csvFile").addEventListener("change", function () {
             type: TYPES[r[3]] ? r[3] : "jp",
             currency: col("currency", -1) === "USD" ? "USD" : "JPY",
             buyPrice: num(col("buy_price", 4)), qty: num(col("qty", 5)), curPrice: num(col("cur_price", 6)),
-            memo: col("memo", 7) || "", yutai: col("yutai", 8) || "", yutaiMonth: col("yutai_month", 9) || ""
+            memo: col("memo", 7) || "", yutai: col("yutai", 8) || "", yutaiMonth: col("yutai_month", 9) || "",
+            broker: col("broker", -1) || "", code: col("code", -1) || ""
           });
           touched[m] = true;
         } else if (kind === "snapshot" && /^\d{4}-\d{2}-\d{2}$/.test(r[2] || "")) {
@@ -1519,7 +1811,7 @@ function parseRakutenDetailSection(rows) {
       if (/米ドル|USD/.test(name)) cc = "USD";
       else if (/円|JPY/.test(name) || !name) cc = "JPY";
       if (cc && cqty != null && cqty > 0) {
-        out.push({ name: name ? first + "（" + name + "）" : first, code: "", type: "cash", currency: cc, qty: cqty, buyPrice: 1, curPrice: 1 });
+        out.push({ name: name ? first + "（" + name + "）" : first, code: "", type: "cash", currency: cc, qty: cqty, buyPrice: 1, curPrice: 1, broker: "楽天証券" });
       } else skipped++;
       continue;
     }
@@ -1536,7 +1828,8 @@ function parseRakutenDetailSection(rows) {
     var buy = col.buy >= 0 ? parseNumLoose(r2[col.buy]) : null;
     var cur = col.cur >= 0 ? parseNumLoose(r2[col.cur]) : null;
     var val = col.val >= 0 ? parseNumLoose(r2[col.val]) : null;
-    if (qty == null && buy == null && cur == null) { skipped++; continue; }
+    /* 価格の手がかりが1つも無い行は保有として扱わない（価格0で既存保有を潰さないため） */
+    if (buy == null && cur == null && val == null) { skipped++; continue; }
     if (qty == null || qty < 0) qty = 0;
     var qtyUnit = qtyUnitCol >= 0 ? String(r2[qtyUnitCol] || "") : "";
     var buyUnitRaw = buyUnitCol >= 0 ? String(r2[buyUnitCol] || "") : "";
@@ -1562,7 +1855,7 @@ function parseRakutenDetailSection(rows) {
         useQty = candB < candA ? qty / 10000 : qty;
       } else useQty = qty / 10000;
     }
-    out.push({ name: name, code: code, type: type, currency: currency, qty: useQty, buyPrice: buy, curPrice: cur });
+    out.push({ name: name, code: code, type: type, currency: currency, qty: useQty, buyPrice: buy, curPrice: cur, broker: "楽天証券" });
   }
   return { rows: out, skipped: skipped };
 }
@@ -1578,7 +1871,7 @@ function parseRakutenSummaryCash(rows) {
     if (head === "預り金" || head === "楽天銀行普通預金残高") {
       var amt = parseNumLoose(r[1]);
       if (amt != null && amt > 0) {
-        out.push({ name: head === "預り金" ? "預り金" : "楽天銀行 普通預金", code: "", type: "cash", currency: "JPY", qty: amt, buyPrice: 1, curPrice: 1 });
+        out.push({ name: head === "預り金" ? "預り金" : "楽天銀行 普通預金", code: "", type: "cash", currency: "JPY", qty: amt, buyPrice: 1, curPrice: 1, broker: head === "預り金" ? "楽天証券" : "楽天銀行" });
       }
     }
   }
@@ -1605,7 +1898,11 @@ function parseRakutenHoldingsLegacy(text) {
   var map = null, section = null;
   rows.forEach(function (r) {
     var hm = headerMapFor(r);
-    if (hm && (typeof hm.qty === "number" || typeof hm.buy === "number" || typeof hm.cur === "number")) { map = hm; return; }
+    /* v0.4 バグ修正：ヘッダーの受理には「数量」と「価格の列（現在値・取得単価・評価額のどれか）」の
+       両方を必須にする。配当CSVは「保有数量」列を持つため、数量だけでは配当CSVまで
+       保有と誤認してしまい、価格0の行で既存保有の現在値を潰す事故が起きた */
+    if (hm && typeof hm.qty === "number" &&
+        (typeof hm.cur === "number" || typeof hm.buy === "number" || typeof hm.value === "number")) { map = hm; return; }
     if (nonEmptyCount(r) <= 2) {
       var sec = sectionGuess(r.join(""));
       if (sec) { section = sec; return; }
@@ -1620,7 +1917,8 @@ function parseRakutenHoldingsLegacy(text) {
     var buy = typeof map.buy === "number" ? parseNumLoose(r[map.buy]) : null;
     var cur = typeof map.cur === "number" ? parseNumLoose(r[map.cur]) : null;
     var val = typeof map.value === "number" ? parseNumLoose(r[map.value]) : null;
-    if (qty == null && buy == null && cur == null && val == null) { skipped++; return; }
+    /* 価格の手がかりが1つも無い行は保有として扱わない（数量だけの行を弾く） */
+    if (buy == null && cur == null && val == null) { skipped++; return; }
     if (qty == null || qty < 0) qty = 0;
     /* 種類・通貨の推定：セクション → 商品区分列 → 通貨列 → コードの形 */
     var guess = section;
@@ -1654,7 +1952,7 @@ function parseRakutenHoldingsLegacy(text) {
         useQty = candB < candA ? qty / 10000 : qty;
       } else useQty = qty / 10000;
     }
-    out.push({ name: name, code: code, type: type, currency: currency, qty: useQty, buyPrice: buy, curPrice: cur });
+    out.push({ name: name, code: code, type: type, currency: currency, qty: useQty, buyPrice: buy, curPrice: cur, broker: "楽天証券" });
   });
   return { rows: out, skipped: skipped };
 }
@@ -1746,11 +2044,11 @@ function renderDividends() {
 /* ---------- 証券会社CSV：プレビューと反映 ---------- */
 var pendingBroker = null;
 function brokerRowStatus(r) {
-  return findMergeTarget(r.name, r.type, r.currency) ? "upd" : "new";
+  return findMergeTarget(r.name, r.type, r.currency, r.broker) ? "upd" : "new";
 }
 function showBrokerPreview(parsed) {
   pendingBroker = parsed.rows.map(function (r) {
-    return { name: r.name, type: r.type, currency: r.currency, qty: r.qty, buyPrice: r.buyPrice, curPrice: r.curPrice, include: true };
+    return { name: r.name, type: r.type, currency: r.currency, qty: r.qty, buyPrice: r.buyPrice, curPrice: r.curPrice, code: r.code || "", broker: r.broker || "", include: true };
   });
   pendingBroker.skippedCount = parsed.skipped || 0;
   $("brokerPreviewCard").classList.remove("hidden");
@@ -1779,6 +2077,7 @@ function renderBrokerPreview() {
         "<select data-imp-type='" + i + "' aria-label='種類'>" + typeOpts + "</select>" +
       "</div>" +
       "<div class='inums'>" + (r.currency === "USD" ? "ドル建て" : "円建て") +
+        (r.broker ? "／" + esc(r.broker) : "") +
         "／数量 " + esc(r.qty) + "／取得単価 " + money(r.buyPrice, r.currency) +
         "／現在値 " + money(r.curPrice, r.currency) +
         "／評価額 " + money(num(r.qty) * num(r.curPrice), r.currency) + "</div>";
@@ -1799,22 +2098,27 @@ $("brokerPreviewList").addEventListener("change", function (ev) {
   } else return;
   renderBrokerPreview();
 });
-/* 反映：一致する既存保有は数量・取得単価・現在値だけを更新し、メモ類には絶対に触らない */
+/* 反映：一致する既存保有は数量・取得単価・現在値だけを更新し、メモ類には絶対に触らない。
+   v0.4：価格の情報が無い行（買値も現在値も0）は、既存保有の価格を潰す事故防止のため反映しない */
 function applyBrokerHoldings(rows) {
   var d = ds();
-  var added = 0, updated = 0;
+  var added = 0, updated = 0, skippedNoPrice = 0;
   rows.forEach(function (r) {
     if (!r.include) return;
-    var ex = findMergeTarget(r.name, r.type, r.currency);
+    if (!(num(r.buyPrice) > 0) && !(num(r.curPrice) > 0) && r.type !== "cash") { skippedNoPrice++; return; }
+    var ex = findMergeTarget(r.name, r.type, r.currency, r.broker);
     if (ex) {
       ex.qty = r.qty;
       ex.buyPrice = r.buyPrice;
       ex.curPrice = r.curPrice;
+      if (r.code) ex.code = r.code;
+      if (r.broker) ex.broker = r.broker;
       updated++;
     } else {
       d.holdings.push({
         id: uid(), name: r.name, type: r.type, currency: r.currency,
         qty: r.qty, buyPrice: r.buyPrice, curPrice: r.curPrice,
+        broker: r.broker || "", code: r.code || "",
         memo: "", yutai: "", yutaiMonth: ""
       });
       added++;
@@ -1822,22 +2126,48 @@ function applyBrokerHoldings(rows) {
   });
   recordSnapshot();
   saveDataset(state.mode);
-  return { added: added, updated: updated };
+  return { added: added, updated: updated, skippedNoPrice: skippedNoPrice };
 }
-$("brokerApplyBtn").addEventListener("click", function () {
+function doBrokerApply() {
   if (!pendingBroker) return;
   var res = applyBrokerHoldings(pendingBroker);
   pendingBroker = null;
   $("brokerPreviewCard").classList.add("hidden");
   renderAll();
-  toast("取り込みました（新規 " + res.added + "件／更新 " + res.updated + "件）");
-});
-$("brokerCancelBtn").addEventListener("click", function () {
+  var msg = "取り込みました（新規 " + res.added + "件／更新 " + res.updated + "件）";
+  if (res.skippedNoPrice) msg += "。価格の無い " + res.skippedNoPrice + " 件は反映しませんでした";
+  toast(msg);
+}
+function doBrokerCancel() {
   pendingBroker = null;
   $("brokerPreviewCard").classList.add("hidden");
-});
+}
+$("brokerApplyBtn").addEventListener("click", doBrokerApply);
+$("brokerCancelBtn").addEventListener("click", doBrokerCancel);
+$("brokerApplyBtnTop").addEventListener("click", doBrokerApply);
+$("brokerCancelBtnTop").addEventListener("click", doBrokerCancel);
 
 /* ---------- 証券会社CSV：ファイル読み込みと判別 ---------- */
+/* ファイルの中身から、保有CSVか配当CSVかを見分ける署名を返す（どちらでもなければ null）。
+   配当：日付の列＋受取金額（または配当金額）の列を持つヘッダー行がある。
+   保有：詳細表の見出し（種別＋保有数量）か「保有商品詳細」の見出しがある */
+function csvKindSignature(text) {
+  var rows = parseCsv(text);
+  var limit = Math.min(rows.length, 60);
+  for (var i = 0; i < limit; i++) {
+    var r = rows[i];
+    var hm = headerMapFor(r);
+    if (hm && typeof hm.date === "number" && (typeof hm.amountReceived === "number" || typeof hm.amountDiv === "number")) return "dividends";
+    var hasType = false, hasQty = false;
+    r.forEach(function (c) {
+      var h = normHead(c);
+      if (h === "種別") hasType = true;
+      if (h.indexOf("保有数量") >= 0 || h.indexOf("保有口数") >= 0 || h.indexOf("保有商品詳細") >= 0) hasQty = true;
+    });
+    if (hasType && hasQty) return "holdings";
+  }
+  return null;
+}
 $("brokerImportBtn").addEventListener("click", function () { $("brokerFile").click(); });
 $("brokerFile").addEventListener("change", function () {
   var file = $("brokerFile").files[0];
@@ -1847,6 +2177,7 @@ $("brokerFile").addEventListener("change", function () {
     try {
       var sjis = new TextDecoder("shift-jis").decode(reader.result);
       var utf8 = new TextDecoder("utf-8").decode(reader.result);
+      var sig = csvKindSignature(sjis);
       var choice = $("brokerFormat").value;
       var kind = null;
       if (choice === "rakuten-holdings") kind = "holdings";
@@ -1859,8 +2190,21 @@ $("brokerFile").addEventListener("change", function () {
           $("brokerFile").value = "";
           return;
         }
+        else if (sig) kind = sig;
         else if (sjis.indexOf("受取金額") >= 0) kind = "dividends";
         else if (sjis.indexOf("銘柄コード") >= 0 || sjis.indexOf("保有数量") >= 0 || sjis.indexOf("口数") >= 0) kind = "holdings";
+      }
+      /* v0.4：種類の取り違え防止。選んだ種類と中身の署名が食い違ったら、取り込まずに案内する
+         （配当CSVを保有として読み込むと、価格0の行で保有を潰す事故につながるため） */
+      if (kind === "holdings" && sig === "dividends") {
+        toast("これは配当・分配金のCSVのようです。「CSVの種類」を『楽天証券の配当CSV』に変えて取り込んでください");
+        $("brokerFile").value = "";
+        return;
+      }
+      if (kind === "dividends" && sig === "holdings") {
+        toast("これは保有のCSVのようです。「CSVの種類」を『楽天証券の保有CSV』に変えて取り込んでください");
+        $("brokerFile").value = "";
+        return;
       }
       if (kind === "holdings") {
         var ph = parseRakutenHoldings(sjis);
@@ -1872,13 +2216,16 @@ $("brokerFile").addEventListener("change", function () {
         if (!pd.rows.length) { var pdU = parseRakutenDividends(utf8); if (pdU.rows.length) pd = pdU; }
         if (!pd.rows.length) toast("配当の行を読み取れませんでした");
         else {
-          if (!ds().dividends) ds().dividends = [];
-          var newCount = countNewDividends(ds().dividends, pd.rows);
+          /* 配当の反映は dividends だけを触る。保有・スナップショットには一切触らない
+             （v0.4で分離を明示。保有が変わるのは保有CSVの反映だけ） */
+          var dset = ds();
+          if (!Array.isArray(dset.dividends)) dset.dividends = [];
+          var newCount = countNewDividends(dset.dividends, pd.rows);
           if (!confirm("配当 " + pd.rows.length + " 件のうち、新しい " + newCount + " 件を「" + (state.mode === "trial" ? "お試し" : "本番") + "」に取り込みます。よろしいですか？")) {
             $("brokerFile").value = "";
             return;
           }
-          var added = mergeDividends(ds().dividends, pd.rows);
+          var added = mergeDividends(dset.dividends, pd.rows);
           saveDataset(state.mode);
           renderAll();
           toast("配当を取り込みました（新規 " + added + "件）");
