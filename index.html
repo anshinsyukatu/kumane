@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#D84336" />
 <title>くまねー</title>
 <style>
-  /* くまねー v0.5.1
+  /* くまねー v0.6
      配色は家族ルック：背景は白、カードは「くまカラー」#f0dcbc、文字 #3a352d、アクセント #d84336。
      ダークモード対策（恒常ルール）：自分の背景を持つ要素は背景色と文字色を固定値でセット指定し、
      prefers-color-scheme: dark でも同じ値を再指定して反転させない。 */
@@ -344,6 +344,37 @@
     .grand-count{ color:#6B6151; }
     .chart-cur{ color:#3A352D; }
   }
+
+  /* v0.6 持株会シミュレーター（お試し専用タブ。固定色ペアで指定） */
+  .sim-stock-info{ background:#FFFFFF; color:#3A352D; border:1px solid #DECFA6; border-radius:10px; padding:10px 12px; margin-top:10px; }
+  .sim-info-name{ font-weight:800; font-size:15.5px; color:#D84336; }
+  .sim-bonus-detail{ background:#FFFFFF; color:#3A352D; border:1px solid #DECFA6; border-radius:10px; padding:10px 12px; font-size:13.5px; line-height:1.7; }
+  .sim-res-company{ font-size:19px; font-weight:800; color:#3A352D; margin-top:2px; }
+  .sim-kpi-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .sim-kpi{ background:#FFFFFF; color:#3A352D; border:1px solid #DECFA6; border-radius:10px; padding:10px 8px; text-align:center; }
+  .sim-kpi .klabel{ font-size:11.5px; color:#6B6151; }
+  .sim-kpi .kval{ font-size:17px; font-weight:800; margin-top:2px; }
+  .sim-kpi .ksub{ font-size:11.5px; color:#6B6151; margin-top:2px; }
+  .sim-bar-row{ display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .sim-bar-row:first-of-type{ margin-top:4px; }
+  .sim-bar-label{ font-size:12px; color:#3A352D; width:76px; flex:0 0 auto; line-height:1.35; }
+  .sim-bar-track{ flex:1; background:#FFFFFF; border:1px solid #DECFA6; border-radius:6px; height:24px; overflow:hidden; }
+  .sim-bar-fill{ height:100%; border-radius:5px; min-width:0; }
+  .sim-bar-val{ font-size:13.5px; font-weight:800; color:#3A352D; width:96px; flex:0 0 auto; text-align:right; white-space:nowrap; }
+  .sim-disclaimer{ font-size:12px; color:#6B6151; line-height:1.7; }
+  @media (prefers-color-scheme: dark){
+    .sim-stock-info{ background:#FFFFFF; color:#3A352D; border-color:#DECFA6; }
+    .sim-info-name{ color:#D84336; }
+    .sim-bonus-detail{ background:#FFFFFF; color:#3A352D; border-color:#DECFA6; }
+    .sim-res-company{ color:#3A352D; }
+    .sim-kpi{ background:#FFFFFF; color:#3A352D; border-color:#DECFA6; }
+    .sim-kpi .klabel{ color:#6B6151; }
+    .sim-kpi .ksub{ color:#6B6151; }
+    .sim-bar-label{ color:#3A352D; }
+    .sim-bar-track{ background:#FFFFFF; border-color:#DECFA6; }
+    .sim-bar-val{ color:#3A352D; }
+    .sim-disclaimer{ color:#6B6151; }
+  }
 </style>
 </head>
 <body>
@@ -351,7 +382,7 @@
 
   <header class="top">
     <h1>くまねー<span class="bear-c" role="img" aria-label="くまま"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.8" cy="5.4" r="2.7" fill="currentColor"/><circle cx="17.2" cy="5.4" r="2.7" fill="currentColor"/><path d="M12 20.8c-4.3 0-7-2.6-7-6.2C5 10.7 8.1 7.5 12 7.5s7 3.2 7 7.1c0 3.6-2.7 6.2-7 6.2Z" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><circle cx="9.4" cy="13.3" r="1.1" fill="currentColor"/><circle cx="14.6" cy="13.3" r="1.1" fill="currentColor"/><path d="M10.1 16.2c.6.5 1.2.8 1.9.8s1.3-.3 1.9-.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span></h1>
-    <span class="ver">v0.5.1</span>
+    <span class="ver">v0.6</span>
   </header>
 
   <!-- モード帯：本番とお試しは別データ。色とバッジで常に区別する -->
@@ -367,6 +398,7 @@
   <nav class="tabs">
     <button type="button" data-tab="home" class="active">ホーム</button>
     <button type="button" data-tab="holdings">保有</button>
+    <button type="button" data-tab="mochikabu" id="tabBtnMochikabu" class="hidden">持株会</button>
     <button type="button" data-tab="data">データ</button>
     <button type="button" data-tab="about">説明</button>
   </nav>
@@ -503,6 +535,174 @@
     </div>
   </section>
 
+  <!-- 持株会シミュレーター（v0.6：お試しモードのときだけタブが出る。本番には出さない） -->
+  <section id="tab-mochikabu" class="hidden">
+    <div class="card">
+      <h2>持株会シミュレーター</h2>
+      <div class="sub">お試し専用の試算です。本番の記録とは混ざりません。入れた条件は、お試しの記録としてこの端末に残ります（円・日本株だけの試算です）。</div>
+    </div>
+
+    <div class="card">
+      <h2>① 銘柄を選ぶ</h2>
+      <div class="form-grid">
+        <div class="full">
+          <label for="simStock">シミュレーション対象銘柄</label>
+          <select id="simStock">
+            <option value="7203">トヨタ自動車 (7203) - 自動車・輸送機</option>
+            <option value="7259" selected>アイシン (7259) - 自動車部品</option>
+            <option value="9432">日本電信電話 / NTT (9432) - 情報・通信</option>
+            <option value="8306">三菱UFJフィナンシャル・グループ (8306) - 銀行業</option>
+            <option value="6758">ソニーグループ (6758) - 電気機器</option>
+            <option value="8316">三井住友フィナンシャルグループ (8316) - 銀行業</option>
+          </select>
+          <div class="sub mt8">タップして選べます。</div>
+        </div>
+      </div>
+      <div class="sim-stock-info">
+        <div class="sim-info-name" id="simInfoName">7259 株式会社アイシン</div>
+        <div class="sub" id="simInfoSub">東証プライム ／ 自動車・輸送機</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>② 期間を選ぶ</h2>
+      <div class="seg" id="simModeSeg" role="group" aria-label="期間の指定方法">
+        <button type="button" data-sim-mode="past" class="on">📅 過去〇年</button>
+        <button type="button" data-sim-mode="range">📆 年〜年を指定</button>
+      </div>
+      <div id="simPanelPast" class="mt12">
+        <div class="form-grid">
+          <div class="full">
+            <label for="simPastYears">過去何年間でシミュレーションしますか？</label>
+            <select id="simPastYears">
+              <option value="3">過去3年</option>
+              <option value="5">過去5年</option>
+              <option value="7">過去7年</option>
+              <option value="10" selected>過去10年</option>
+              <option value="15">過去15年</option>
+              <option value="20">過去20年</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="simPanelRange" class="mt12 hidden">
+        <div class="form-grid">
+          <div>
+            <label for="simStartYear">開始年</label>
+            <select id="simStartYear"></select>
+          </div>
+          <div>
+            <label for="simEndYear">終了年</label>
+            <select id="simEndYear"></select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>③ ボーナス月の設定</h2>
+      <label class="switch-line">
+        <input type="checkbox" id="simBonus" checked />
+        <span>ボーナス月（6月・12月）に追加拠出する</span>
+      </label>
+      <div class="sim-bonus-detail mt8" id="simBonusDetail"></div>
+    </div>
+
+    <div class="card">
+      <h2>④ 積立条件</h2>
+      <div class="form-grid">
+        <div>
+          <label for="simSelf">毎月の自己負担（円）</label>
+          <input type="number" id="simSelf" value="1000" min="0" step="100" inputmode="numeric" />
+        </div>
+        <div>
+          <label for="simPoint">ポイント充当額（円）</label>
+          <input type="number" id="simPoint" value="4000" min="0" step="100" inputmode="numeric" />
+        </div>
+        <div>
+          <label for="simReward">奨励金率（%）</label>
+          <input type="number" id="simReward" value="5" min="0" max="30" inputmode="decimal" />
+        </div>
+      </div>
+      <button type="button" class="btn primary mt12" id="simRunBtn" style="width:100%">▶ シミュレーション実行</button>
+    </div>
+
+    <div id="simResult" class="hidden">
+      <div class="card">
+        <div class="sub">シミュレーション結果</div>
+        <div class="sim-res-company" id="simResCompany">—</div>
+        <div class="sub" id="simResPeriod">—</div>
+        <div class="sim-kpi-grid mt12">
+          <div class="sim-kpi">
+            <div class="klabel">実質自己負担（累計）</div>
+            <div class="kval" id="simKpiSelf">—</div>
+            <div class="ksub">ポイント分は含まず</div>
+          </div>
+          <div class="sim-kpi">
+            <div class="klabel">投資総額（奨励金込）</div>
+            <div class="kval" id="simKpiInvest">—</div>
+            <div class="ksub" id="simKpiInvestSub">—</div>
+          </div>
+          <div class="sim-kpi">
+            <div class="klabel">配当再投資累計</div>
+            <div class="kval" id="simKpiDivTotal">—</div>
+            <div class="ksub" id="simKpiDivTotalSub">配当で買い増した株の価値</div>
+          </div>
+          <div class="sim-kpi">
+            <div class="klabel">最終評価額（配当込）</div>
+            <div class="kval" id="simKpiFinal">—</div>
+            <div class="ksub" id="simKpiFinalSub">—</div>
+          </div>
+          <div class="sim-kpi">
+            <div class="klabel">損益（配当再投資込）</div>
+            <div class="kval" id="simKpiProfit">—</div>
+            <div class="ksub" id="simKpiProfitSub">—</div>
+          </div>
+          <div class="sim-kpi">
+            <div class="klabel">配当なし時との差</div>
+            <div class="kval" id="simKpiDivDiff">—</div>
+            <div class="ksub">再投資の上乗せ効果</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📈 持株会評価額の推移（配当再投資あり／なし比較）</h2>
+        <div class="chart-box" id="simChartBox"></div>
+        <div class="legend">
+          <span><span class="dot" style="background:#8E24AA"></span>配当再投資あり</span>
+          <span><span class="dot" style="background:#1565C0"></span>配当なし</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>💰 3つの選択肢 比較</h2>
+        <div class="sim-bar-row">
+          <div class="sim-bar-label">持株会<br>（配当込）</div>
+          <div class="sim-bar-track"><div class="sim-bar-fill" id="simBarStock" style="background:#8E24AA;width:0%"></div></div>
+          <div class="sim-bar-val" id="simBarValStock">—</div>
+        </div>
+        <div class="sim-bar-row">
+          <div class="sim-bar-label">持株会<br>（配当なし）</div>
+          <div class="sim-bar-track"><div class="sim-bar-fill" id="simBarNoDiv" style="background:#1565C0;width:0%"></div></div>
+          <div class="sim-bar-val" id="simBarValNoDiv">—</div>
+        </div>
+        <div class="sim-bar-row">
+          <div class="sim-bar-label">預貯金<br>（0.1%）</div>
+          <div class="sim-bar-track"><div class="sim-bar-fill" id="simBarSave" style="background:#607D8B;width:0%"></div></div>
+          <div class="sim-bar-val" id="simBarValSave">—</div>
+        </div>
+        <div class="sim-bar-row">
+          <div class="sim-bar-label">ポイント<br>消費のみ</div>
+          <div class="sim-bar-track"><div class="sim-bar-fill" style="background:#D84336;width:15%"></div></div>
+          <div class="sim-bar-val">¥0</div>
+        </div>
+        <div class="sim-disclaimer mt12">※ 株価・配当データは過去の実績傾向に基づくモデルデータです。将来の結果を保証するものではありません。<br>
+        このシミュレーターは情報提供目的であり、投資を勧誘するものではありません。</div>
+      </div>
+    </div>
+  </section>
+
   <!-- データ -->
   <section id="tab-data" class="hidden">
     <div class="card">
@@ -580,6 +780,7 @@
          ・現金・預金は、CSVがなくても手入力で追加できます。「保有」タブの追加フォームで種類に「現金・預金」を選び、金額（残高）と金融機関（候補から選ぶか、自分で追加もできます）を入れてください。<br>
          ・同じ名前・種類・通貨の保有を追加すると、買い増しとして合算されます（買値は平均取得単価になります）。<br>
          ・「本番」と「お試し」は記録が完全に分かれています。お試しは、元手を決めて「買ったつもり」で練習できます。<br>
+         ・お試しには「持株会」タブがあります。持株会の積立（自己負担＋ポイント＋奨励金、ボーナス月の追加拠出、配当の再投資）を試算するシミュレーターで、別ページで公開していた「持株会シミュレーター」を取り込んだものです。条件はお試しの記録として端末に残り、本番の記録には混ざりません。株価・配当は過去の実績傾向に基づくモデルデータで計算します。<br>
          ・現在値を更新すると、その日の総評価額が記録され、推移グラフと週・月・年の収支に使われます。<br>
          ・記録はこの端末の中だけに保存されます。外部に送信されることはありません。機種変更やブラウザのデータ消去で消えることがあるので、CSVの書き出しがおすすめです。</p>
       <p><strong>このアプリは記録と試算のための道具です。投資の助言はしません。</strong></p>
@@ -587,6 +788,9 @@
 
     <div class="card">
       <h2>更新履歴</h2>
+      <p><strong>v0.6</strong><br>
+         ・お試しに「持株会」タブを追加しました（本番には出ません）。別ページの「持株会シミュレーター」を機能ごと取り込み、銘柄・期間・ボーナス月の追加拠出・積立条件から、配当再投資あり／なしの評価額の推移と、預貯金との比較まで試算できます。<br>
+         ・入れた条件はお試しの記録として端末に残り、次に開いたときも残っています。本番の記録には一切混ざりません。</p>
       <p><strong>v0.5.1</strong><br>
          ・現金・預金の損益率がおかしい桁数になることがある問題を直しました（現金・預金は買値・現在値とも1にそろえ、損益は常に0として計算します。すでに入っている記録も、開いたときに自動で直ります）。<br>
          ・「現在値を更新」が終わらないことがある問題を直しました（1件ごとに10秒で打ち切り、進み具合と、取れなかった内訳を表示します）。<br>
@@ -709,7 +913,7 @@
 <script>
 "use strict";
 /* ============================================================
-   くまねー v0.5.1
+   くまねー v0.6
    - データは localStorage のみ（記録の外部送信なし）
    - 本番（real）とお試し（trial）は別データセットで完全分離
    - 通貨は円（JPY）／ドル（USD）。換算はせず、通貨ごとに完結させる
@@ -736,7 +940,7 @@ var MODE_KEY = "kumane.mode.v1";
 var DATA_KEYS = { real: "kumane.real.v1", trial: "kumane.trial.v1" };
 
 /* ---------- 保存・読み込み ---------- */
-function emptyDataset() { return { capital: 0, holdings: [], snapshots: [], dividends: [] }; }
+function emptyDataset() { return { capital: 0, holdings: [], snapshots: [], dividends: [], mochikabu: null }; }
 
 function loadDataset(which) {
   try {
@@ -747,6 +951,8 @@ function loadDataset(which) {
     if (typeof d.capital !== "number") d.capital = 0;
     /* v0.3 移行：配当の記録が無いデータには空の配列を足す（記録は消さない） */
     if (!Array.isArray(d.dividends)) d.dividends = [];
+    /* v0.6 移行：持株会シミュレーターの条件（お試しだけが使う）が無いデータには null を足す */
+    if (!d.mochikabu || typeof d.mochikabu !== "object") d.mochikabu = null;
     /* v0.2 移行：通貨が無い保有は「円」。スナップショットの旧 total は円の値として引き継ぐ
        （ドルの履歴は無いので usd は未定義のまま＝推移・期間収支のドル計算からは除外される） */
     d.holdings.forEach(function (h) { if (h.currency !== "USD") h.currency = "JPY"; });
@@ -953,6 +1159,16 @@ function renderMode() {
   $("capitalCard").classList.toggle("hidden", !trial);
   $("capitalLine").classList.toggle("hidden", !trial);
   $("clearModeBtn").textContent = (trial ? "お試し" : "本番") + "の記録を全て消す";
+  /* v0.6：持株会タブはお試しのときだけ出す。本番へ切り替えたときに持株会タブを
+     開いたままだったら、ホームに戻す（本番の画面に試算を残さない） */
+  $("tabBtnMochikabu").classList.toggle("hidden", !trial);
+  if (!trial && !$("tab-mochikabu").classList.contains("hidden")) {
+    $("tab-mochikabu").classList.add("hidden");
+    $("tab-home").classList.remove("hidden");
+    document.querySelectorAll("nav.tabs button").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-tab") === "home");
+    });
+  }
 }
 
 /* ---------- 描画：ホーム ---------- */
@@ -1333,6 +1549,7 @@ function renderAll() {
   renderHome();
   renderDividends();
   renderHoldings();
+  renderMochikabu();
   if (state.mode === "trial") $("capitalInput").value = ds().capital || "";
   $("useExtraToggle").checked = state.settings.useExtra;
 }
@@ -1761,7 +1978,7 @@ document.querySelectorAll("nav.tabs button").forEach(function (btn) {
   btn.addEventListener("click", function () {
     document.querySelectorAll("nav.tabs button").forEach(function (b) { b.classList.remove("active"); });
     btn.classList.add("active");
-    ["home", "holdings", "data", "about"].forEach(function (t) {
+    ["home", "holdings", "mochikabu", "data", "about"].forEach(function (t) {
       $("tab-" + t).classList.toggle("hidden", t !== btn.getAttribute("data-tab"));
     });
   });
@@ -1887,6 +2104,9 @@ $("csvFile").addEventListener("change", function () {
       /* 配当の行が無いCSV（v0.2以前など）では、既存の配当記録を消さずに引き継ぐ */
       if (!divSeen.real) next.real.dividends = state.data.real.dividends || [];
       if (!divSeen.trial) next.trial.dividends = state.data.trial.dividends || [];
+      /* v0.6：持株会シミュレーターの条件はCSVに含まれないので、置き換えてもお試し分は引き継ぐ
+         （本番側には持株会の条件を持たない） */
+      next.trial.mochikabu = state.data.trial.mochikabu || null;
       next.real.dividends.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
       next.trial.dividends.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
       if (touched.real) { next.real.snapshots.sort(function (a, b) { return a.date < b.date ? -1 : 1; }); state.data.real = next.real; saveDataset("real"); }
@@ -2463,6 +2683,313 @@ $("clearAllBtn").addEventListener("click", function () {
   resetForm();
   renderAll();
   toast("全ての記録を消しました");
+});
+
+/* ---------- v0.6 持株会シミュレーター（お試し専用） ----------
+   別ページ「持株会シミュレーター ver4」（本人の cafeteriaplan）の計算をそのまま移植したもの。
+   銘柄ごとのモデル（基準価格・変動率・配当利回り）で、銘柄コードを種にした疑似乱数により
+   月ごとの価格の流れを作り、自己負担＋ポイント＋奨励金で毎月買い付け、配当（3月・9月）を
+   再投資する前提で試算する。実データではなくモデルデータによる試算。
+   条件はお試し（trial）のデータセットの中だけに保存し、本番には一切触れない。通貨は円のみ */
+var SIM_STOCKS = {
+  "7203": { name: "7203 トヨタ自動車", sub: "東証プライム ／ 自動車・輸送機", basePrice: 2400, volatility: 0.04, divYield: 0.025 },
+  "7259": { name: "7259 株式会社アイシン", sub: "東証プライム ／ 自動車・輸送機", basePrice: 1600, volatility: 0.038, divYield: 0.035 },
+  "9432": { name: "9432 日本電信電話 (NTT)", sub: "東証プライム ／ 情報・通信", basePrice: 165, volatility: 0.02, divYield: 0.032 },
+  "8306": { name: "8306 三菱UFJフィナンシャル・G", sub: "東証プライム ／ 銀行業", basePrice: 1100, volatility: 0.045, divYield: 0.028 },
+  "6758": { name: "6758 ソニーグループ", sub: "東証プライム ／ 電気機器", basePrice: 2800, volatility: 0.05, divYield: 0.007 },
+  "8316": { name: "8316 三井住友フィナンシャルグループ", sub: "東証プライム ／ 銀行業", basePrice: 7500, volatility: 0.042, divYield: 0.03 }
+};
+function simDefaults() {
+  return { code: "7259", mode: "past", pastYears: 10, startYear: 2015, endYear: new Date().getFullYear(), bonus: true, self: 1000, point: 4000, reward: 5, ran: false };
+}
+/* 保存済みの条件（お試しのデータセット内）を取り出す。無い・壊れている場合は初期値 */
+function simSettings() {
+  var d = simDefaults();
+  var s = state.data.trial ? state.data.trial.mochikabu : null;
+  if (!s || typeof s !== "object") return d;
+  if (SIM_STOCKS[s.code]) d.code = String(s.code);
+  if (s.mode === "past" || s.mode === "range") d.mode = s.mode;
+  ["pastYears", "startYear", "endYear", "self", "point", "reward"].forEach(function (k) {
+    if (isFinite(Number(s[k]))) d[k] = Number(s[k]);
+  });
+  d.bonus = s.bonus !== false;
+  d.ran = !!s.ran;
+  return d;
+}
+function saveSimSettings(s) {
+  state.data.trial.mochikabu = {
+    code: s.code, mode: s.mode, pastYears: s.pastYears, startYear: s.startYear, endYear: s.endYear,
+    bonus: !!s.bonus, self: s.self, point: s.point, reward: s.reward, ran: !!s.ran
+  };
+  saveDataset("trial");
+}
+/* 試算の本体（元の generateAndCalc の移植。純粋関数：テストから直接呼べる）。
+   input: { code, mode, pastYears, startYear, endYear, bonus, self, point, reward }
+   nowDate はテスト用（省略時は今日）。計算できない条件では null を返す */
+function runMochikabuSim(input, nowDate) {
+  var meta = SIM_STOCKS[input.code];
+  if (!meta) return null;
+  var now = nowDate || new Date();
+  var selfMonthly = input.self, pointAmt = input.point, rewardPct = input.reward, bonusOn = !!input.bonus;
+  var startYear, endYear;
+  if (input.mode === "range") {
+    startYear = input.startYear; endYear = input.endYear;
+    if (!(endYear > startYear)) return null;
+  } else {
+    endYear = now.getFullYear();
+    startYear = endYear - (input.pastYears || 10);
+  }
+  var rewardRate = rewardPct / 100;
+  var bonusMonths = [6, 12];
+
+  /* 期間に応じた価格の流れを生成（銘柄コードを種にした疑似乱数。元の方式のまま） */
+  var currentP = meta.basePrice * 0.6;
+  var prices = [];
+  var divData = [];
+  var seed = parseInt(input.code, 10);
+  function pseudoRandom() {
+    seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280;
+  }
+  for (var y = startYear; y <= endYear; y++) {
+    var annualDiv = meta.basePrice * meta.divYield;
+    divData.push({ y: y, divPerShare: Math.round(annualDiv), months: [3, 9] });
+    for (var m = 1; m <= 12; m++) {
+      if (y === endYear && m > now.getMonth() + 1) break;
+      var change = (pseudoRandom() - 0.47) * meta.volatility * currentP;
+      currentP = Math.max(50, currentP + change);
+      prices.push({ y: y, m: m, p: Math.round(currentP * 10) / 10 });
+    }
+  }
+  if (!prices.length) return null;
+
+  var divMap = {};
+  divData.forEach(function (dd) {
+    var perPay = dd.divPerShare / dd.months.length;
+    dd.months.forEach(function (mm) { divMap[dd.y + "-" + mm] = perPay; });
+  });
+
+  var totalSelf = 0, totalInvest = 0, totalShares = 0, totalSharesND = 0;
+  var savings = 0, totalReward = 0, totalDivAmount = 0, totalDivShares = 0;
+  var labels = [], portVals = [], portNDVals = [], selfVals = [], savingsVals = [];
+
+  prices.forEach(function (pr) {
+    var isBonus = bonusOn && bonusMonths.indexOf(pr.m) >= 0;
+    var selfAmt = selfMonthly + (isBonus ? 3000 : 0);
+    var purchase = (selfAmt + pointAmt) * (1 + rewardRate);
+    var reward = (selfAmt + pointAmt) * rewardRate;
+    var newShares = purchase / pr.p;
+    totalSelf += selfAmt;
+    totalInvest += purchase;
+    totalReward += reward;
+    totalShares += newShares;
+    totalSharesND += newShares;
+
+    var divKey = pr.y + "-" + pr.m;
+    if (divMap[divKey]) {
+      var divTotal = divMap[divKey] * totalShares;
+      var divShares = divTotal / pr.p;
+      totalDivAmount += divTotal;
+      totalDivShares += divShares;
+      totalShares += divShares;
+    }
+
+    savings += selfAmt;
+    savings *= (1 + 0.001 / 12);
+
+    labels.push(pr.m === 1 ? String(pr.y) : (pr.m === 7 ? pr.y + "/7" : ""));
+    portVals.push(Math.round(totalShares * pr.p));
+    portNDVals.push(Math.round(totalSharesND * pr.p));
+    selfVals.push(Math.round(totalSelf));
+    savingsVals.push(Math.round(savings));
+  });
+
+  var finalPrice = prices[prices.length - 1].p;
+  var finalVal = Math.round(totalShares * finalPrice);
+  var finalValND = Math.round(totalSharesND * finalPrice);
+  var divEffect = finalVal - finalValND;
+  var divFinalVal = Math.round(totalDivShares * finalPrice);
+  var profit = finalVal - totalSelf;
+  var profitRate = totalSelf > 0 ? profit / totalSelf * 100 : 0;
+
+  /* 比較バーの長さ（元の方式：最大の選択肢を85%として、最低でも10%は出す） */
+  var maxV = Math.max(finalVal, finalValND, savings, totalSelf);
+  function barPct(v) { return maxV > 0 ? Math.max(10, v / maxV * 85) : 10; }
+
+  return {
+    name: meta.name, sub: meta.sub,
+    startYear: startYear, endYear: endYear, months: prices.length,
+    totalSelf: totalSelf, totalInvest: totalInvest, totalReward: totalReward,
+    totalDivAmount: totalDivAmount, divFinalVal: divFinalVal,
+    finalPrice: finalPrice, finalVal: finalVal, finalValND: finalValND,
+    divEffect: divEffect, profit: profit, profitRate: profitRate, savings: savings,
+    labels: labels, portVals: portVals, portNDVals: portNDVals,
+    selfVals: selfVals, savingsVals: savingsVals,
+    barStock: barPct(finalVal), barNoDiv: barPct(finalValND), barSave: barPct(savings)
+  };
+}
+
+/* 推移グラフ（配当再投資あり／なしの2系列。推移グラフと同じSVGの流儀） */
+function simChartSvg(res) {
+  var a = res.portVals, b = res.portNDVals;
+  var max = 0;
+  a.forEach(function (v) { if (v > max) max = v; });
+  b.forEach(function (v) { if (v > max) max = v; });
+  var tk = chartTicks(max);
+  var W = 640, H = 210, L = 68, R = 10, T = 22, B = 26;
+  var pw = W - L - R, ph = H - T - B;
+  var n = a.length;
+  var X = function (i) { return n === 1 ? L + pw / 2 : L + pw * i / (n - 1); };
+  var Y = function (v) { return T + ph - ph * (v / tk.top); };
+  var svg = "<svg viewBox='0 0 " + W + " " + H + "' role='img' aria-label='持株会評価額の推移グラフ'>";
+  svg += "<text x='" + L + "' y='13' font-size='11' fill='#6B6151'>単位：円</text>";
+  for (var gv = 0; gv <= tk.top + tk.step * 0.001; gv += tk.step) {
+    var gy = Y(gv);
+    svg += "<line x1='" + L + "' y1='" + gy.toFixed(1) + "' x2='" + (W - R) + "' y2='" + gy.toFixed(1) + "' stroke='#E7DCC4' stroke-width='1'/>";
+    svg += "<text x='" + (L - 6) + "' y='" + (gy + 4).toFixed(1) + "' font-size='11' fill='#6B6151' text-anchor='end'>" + fmtTickYen(gv) + "</text>";
+  }
+  function line(vals, color, width) {
+    return "<polyline points='" + vals.map(function (v, i) { return X(i).toFixed(1) + "," + Y(v).toFixed(1); }).join(" ") +
+      "' fill='none' stroke='" + color + "' stroke-width='" + width + "' stroke-linejoin='round' stroke-linecap='round'/>";
+  }
+  svg += line(b, "#1565C0", 2);
+  svg += line(a, "#8E24AA", 2.6);
+  var labelIdx = [];
+  res.labels.forEach(function (lb, i) { if (lb) labelIdx.push(i); });
+  var stepL = Math.max(1, Math.ceil(labelIdx.length / 6));
+  var picked = labelIdx.filter(function (_, k) { return k % stepL === 0; });
+  if (labelIdx.length && picked[picked.length - 1] !== labelIdx[labelIdx.length - 1]) picked.push(labelIdx[labelIdx.length - 1]);
+  picked.forEach(function (i) {
+    var anchor = i === 0 ? "start" : (i === n - 1 ? "end" : "middle");
+    svg += "<text x='" + X(i).toFixed(1) + "' y='" + (H - 6) + "' font-size='11' fill='#6B6151' text-anchor='" + anchor + "'>" + esc(res.labels[i]) + "</text>";
+  });
+  svg += "</svg>";
+  return svg;
+}
+
+function renderSimResult(res) {
+  $("simResCompany").textContent = res.name;
+  $("simResPeriod").textContent = res.startYear + "年〜" + res.endYear + "年（" + res.months + "ヶ月間）";
+  $("simKpiSelf").textContent = yen(res.totalSelf);
+  $("simKpiInvest").textContent = yen(res.totalInvest);
+  $("simKpiInvestSub").textContent = "奨励金 +" + yen(res.totalReward) + "含む";
+  $("simKpiDivTotal").textContent = yen(res.divFinalVal);
+  $("simKpiDivTotalSub").textContent = "受取配当累計 " + yen(res.totalDivAmount);
+  var fin = $("simKpiFinal");
+  fin.textContent = yen(res.finalVal);
+  fin.className = "kval pnl " + pnlClass(res.finalVal - res.totalSelf);
+  $("simKpiFinalSub").textContent = "終値 ¥" + (Math.round(res.finalPrice * 10) / 10).toLocaleString("ja-JP", { maximumFractionDigits: 1 }) + " ／ 配当なし " + yen(res.finalValND);
+  var prof = $("simKpiProfit");
+  prof.textContent = yenSigned(res.profit);
+  prof.className = "kval pnl " + pnlClass(res.profit);
+  $("simKpiProfitSub").textContent = pctSigned(res.profitRate);
+  $("simKpiDivDiff").textContent = yenSigned(res.divEffect);
+  $("simChartBox").innerHTML = simChartSvg(res);
+  $("simBarStock").style.width = res.barStock + "%";
+  $("simBarNoDiv").style.width = res.barNoDiv + "%";
+  $("simBarSave").style.width = res.barSave + "%";
+  $("simBarValStock").textContent = yen(res.finalVal);
+  $("simBarValNoDiv").textContent = yen(res.finalValND);
+  $("simBarValSave").textContent = yen(res.savings);
+  $("simResult").classList.remove("hidden");
+}
+
+/* ---------- 持株会タブの画面まわり ---------- */
+var simMode = "past";
+var simYearsBuilt = false;
+function buildSimYearSelects() {
+  if (simYearsBuilt) return;
+  simYearsBuilt = true;
+  var nowY = new Date().getFullYear();
+  var sh = "", eh = "";
+  for (var y = 2000; y <= nowY; y++) {
+    sh += "<option value='" + y + "'" + (y === 2015 ? " selected" : "") + ">" + y + "年</option>";
+    eh += "<option value='" + y + "'" + (y === nowY ? " selected" : "") + ">" + y + "年</option>";
+  }
+  $("simStartYear").innerHTML = sh;
+  $("simEndYear").innerHTML = eh;
+}
+function setSimModeUi(m) {
+  simMode = m === "range" ? "range" : "past";
+  $("simModeSeg").querySelectorAll("button").forEach(function (b) {
+    b.classList.toggle("on", b.getAttribute("data-sim-mode") === simMode);
+  });
+  $("simPanelPast").classList.toggle("hidden", simMode !== "past");
+  $("simPanelRange").classList.toggle("hidden", simMode !== "range");
+}
+function updateSimStockInfo() {
+  var meta = SIM_STOCKS[$("simStock").value];
+  if (!meta) return;
+  $("simInfoName").textContent = meta.name;
+  $("simInfoSub").textContent = meta.sub;
+}
+function updateSimBonusDetail() {
+  var on = !!$("simBonus").checked;
+  $("simBonusDetail").classList.toggle("hidden", !on);
+  if (!on) return;
+  var self = parseInt($("simSelf").value, 10) || 1000;
+  var point = parseInt($("simPoint").value, 10) || 4000;
+  var fmt = function (v) { return v.toLocaleString("ja-JP"); };
+  $("simBonusDetail").innerHTML =
+    "⭐ ボーナス月は通常" + fmt(self) + "円に加えて <strong>+3,000円を追加拠出</strong>します<br>" +
+    "自己負担：" + fmt(self) + "円 ＋ 3,000円 ＝ <strong>" + fmt(self + 3000) + "円</strong><br>" +
+    "購入合計：ポイント" + fmt(point) + "円 ＋ 自己" + fmt(self + 3000) + "円 ＝ <strong>" + fmt(point + self + 3000) + "円</strong>";
+}
+/* フォームの現在値を条件として読み取る（元の実行時と同じく、空・0の金額は初期値として扱う） */
+function readSimForm() {
+  var s = simSettings();
+  s.code = SIM_STOCKS[$("simStock").value] ? $("simStock").value : "7259";
+  s.mode = simMode;
+  s.pastYears = parseInt($("simPastYears").value, 10) || 10;
+  s.startYear = parseInt($("simStartYear").value, 10) || 2015;
+  s.endYear = parseInt($("simEndYear").value, 10) || new Date().getFullYear();
+  s.bonus = !!$("simBonus").checked;
+  s.self = parseInt($("simSelf").value, 10) || 1000;
+  s.point = parseInt($("simPoint").value, 10) || 4000;
+  s.reward = parseFloat($("simReward").value) || 5;
+  return s;
+}
+function persistSimForm() { saveSimSettings(readSimForm()); }
+function renderMochikabu() {
+  buildSimYearSelects();
+  var s = simSettings();
+  $("simStock").value = s.code;
+  $("simPastYears").value = String(s.pastYears);
+  $("simStartYear").value = String(s.startYear);
+  $("simEndYear").value = String(s.endYear);
+  $("simBonus").checked = s.bonus;
+  $("simSelf").value = s.self;
+  $("simPoint").value = s.point;
+  $("simReward").value = s.reward;
+  setSimModeUi(s.mode);
+  updateSimStockInfo();
+  updateSimBonusDetail();
+  if (s.ran) {
+    var res = runMochikabuSim(s);
+    if (res) { renderSimResult(res); return; }
+  }
+  $("simResult").classList.add("hidden");
+}
+$("simStock").addEventListener("change", function () { updateSimStockInfo(); persistSimForm(); });
+$("simPastYears").addEventListener("change", persistSimForm);
+$("simStartYear").addEventListener("change", persistSimForm);
+$("simEndYear").addEventListener("change", persistSimForm);
+$("simBonus").addEventListener("change", function () { updateSimBonusDetail(); persistSimForm(); });
+$("simSelf").addEventListener("change", function () { updateSimBonusDetail(); persistSimForm(); });
+$("simPoint").addEventListener("change", function () { updateSimBonusDetail(); persistSimForm(); });
+$("simReward").addEventListener("change", persistSimForm);
+$("simModeSeg").addEventListener("click", function (ev) {
+  var btn = ev.target.closest("[data-sim-mode]");
+  if (btn) { setSimModeUi(btn.getAttribute("data-sim-mode")); persistSimForm(); }
+});
+$("simRunBtn").addEventListener("click", function () {
+  var s = readSimForm();
+  if (s.mode === "range" && !(s.endYear > s.startYear)) { toast("終了年は開始年より後にしてください"); return; }
+  var res = runMochikabuSim(s);
+  if (!res) { toast("計算できませんでした"); return; }
+  s.ran = true;
+  saveSimSettings(s);
+  renderSimResult(res);
 });
 
 /* ---------- 初期化 ---------- */
