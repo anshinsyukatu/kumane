@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#D84336" />
 <title>くまねー</title>
 <style>
-  /* くまねー v0.6.1
+  /* くまねー v0.6.2
      配色は家族ルック：背景は白、カードは「くまカラー」#f0dcbc、文字 #3a352d、アクセント #d84336。
      ダークモード対策（恒常ルール）：自分の背景を持つ要素は背景色と文字色を固定値でセット指定し、
      prefers-color-scheme: dark でも同じ値を再指定して反転させない。 */
@@ -61,6 +61,14 @@
     .bear-c{ background:#FFFDF8; color:#D84336; border-color:#D84336; }
   }
   .ver{margin-left:auto;color:var(--sub);font-size:12px}
+  /* 金額表示/非表示トグル（v0.6.2）。自分の背景を持つので固定色ペアで指定し、ダークモードでも同じ値を再指定する */
+  .hide-amt-btn{
+    border:1.6px solid #C9B98F;background:#FFFFFF;color:#3A352D;
+    border-radius:999px;padding:5px 12px;font-weight:700;font-size:13px;white-space:nowrap;
+  }
+  @media (prefers-color-scheme: dark){
+    .hide-amt-btn{ background:#FFFFFF; color:#3A352D; border-color:#C9B98F; }
+  }
 
   /* モード帯（本番／お試しを色と文字で常にはっきり区別） */
   .modebar{
@@ -403,7 +411,8 @@
 
   <header class="top">
     <h1>くまねー<span class="bear-c" role="img" aria-label="くまま"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.8" cy="5.4" r="2.7" fill="currentColor"/><circle cx="17.2" cy="5.4" r="2.7" fill="currentColor"/><path d="M12 20.8c-4.3 0-7-2.6-7-6.2C5 10.7 8.1 7.5 12 7.5s7 3.2 7 7.1c0 3.6-2.7 6.2-7 6.2Z" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><circle cx="9.4" cy="13.3" r="1.1" fill="currentColor"/><circle cx="14.6" cy="13.3" r="1.1" fill="currentColor"/><path d="M10.1 16.2c.6.5 1.2.8 1.9.8s1.3-.3 1.9-.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span></h1>
-    <span class="ver">v0.6.1</span>
+    <span class="ver">v0.6.2</span>
+    <button type="button" class="hide-amt-btn" id="hideAmtBtn" aria-pressed="false">🙈 金額を隠す</button>
   </header>
 
   <!-- モード帯：本番とお試しは別データ。色とバッジで常に区別する -->
@@ -811,6 +820,8 @@
 
     <div class="card">
       <h2>更新履歴</h2>
+      <p><strong>v0.6.2</strong><br>
+         ・金額非表示ボタンを追加しました。画面上部の「金額を隠す」を押すと、評価額・元本・損益・配当などの金額がすべて「¥•••」「$•••」になります（割合（％）・件数・日付・銘柄名・数量はそのまま表示されます）。設定はこの端末に保存され、次に開いたときも残ります。</p>
       <p><strong>v0.6.1</strong><br>
          ・持株会シミュレーターの結果に、「投資総額の内訳」と「最終評価額の内訳」を100%グラフで追加しました。自己負担・ポイント・奨励金の割合と、投資総額・配当再投資・値上がり分の割合が、金額とあわせて一目で分かります（値下がりしたときは「値下がり分」として表示します）。</p>
       <p><strong>v0.6</strong><br>
@@ -938,7 +949,7 @@
 <script>
 "use strict";
 /* ============================================================
-   くまねー v0.6.1
+   くまねー v0.6.2
    - データは localStorage のみ（記録の外部送信なし）
    - 本番（real）とお試し（trial）は別データセットで完全分離
    - 通貨は円（JPY）／ドル（USD）。換算はせず、通貨ごとに完結させる
@@ -1005,8 +1016,9 @@ function loadSettings() {
     var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
     /* v0.4：自分で追加した証券会社・金融機関の候補（端末内に保存） */
     var customs = Array.isArray(s.customBrokers) ? s.customBrokers.filter(function (x) { return typeof x === "string" && x; }) : [];
-    return { useExtra: !!s.useExtra, customBrokers: customs };
-  } catch (e) { return { useExtra: false, customBrokers: [] }; }
+    /* v0.6.2：金額非表示の設定（保有データとは別の設定キーに保存される） */
+    return { useExtra: !!s.useExtra, customBrokers: customs, hideAmounts: !!s.hideAmounts };
+  } catch (e) { return { useExtra: false, customBrokers: [], hideAmounts: false }; }
 }
 
 /* ---------- 証券会社・金融機関の候補 ---------- */
@@ -1041,22 +1053,36 @@ function esc(s) {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 function num(v) { var n = Number(v); return isFinite(n) ? n : 0; }
+/* v0.6.2：金額非表示（設定で端末に保存）。金額の表示はすべて下の整形関数を通るので、
+   ここでフラグを見て伏せ字にすれば全画面に効く。割合（％）・件数・日付・数量は伏せない */
+function amountsHidden() { return !!(state.settings && state.settings.hideAmounts); }
+var MASK_YEN = "¥•••";
+var MASK_USD = "$•••";
 function yen(v) {
+  if (amountsHidden()) return MASK_YEN;
   var sign = v < 0 ? "−" : "";
   return sign + "¥" + Math.abs(Math.round(v)).toLocaleString("ja-JP");
 }
 function yenSigned(v) {
+  if (amountsHidden()) return MASK_YEN;
   if (Math.round(v) === 0) return "±¥0";
   return (v > 0 ? "+" : "−") + "¥" + Math.abs(Math.round(v)).toLocaleString("ja-JP");
+}
+/* 単価の表示（小数第1位まで。持株会の終値など）。金額非表示のときは伏せる */
+function yenPrice(v) {
+  if (amountsHidden()) return MASK_YEN;
+  return "¥" + (Math.round(v * 10) / 10).toLocaleString("ja-JP", { maximumFractionDigits: 1 });
 }
 /* ドルは小数第2位まで（例：$1,502.5）。換算はしない */
 function usdNum(v) {
   return (Math.round(Math.abs(v) * 100) / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 function usd(v) {
+  if (amountsHidden()) return MASK_USD;
   return (v < 0 ? "−" : "") + "$" + usdNum(v);
 }
 function usdSigned(v) {
+  if (amountsHidden()) return MASK_USD;
   if (Math.round(v * 100) === 0) return "±$0";
   return (v > 0 ? "+" : "−") + "$" + usdNum(v);
 }
@@ -1440,13 +1466,17 @@ function chartTicks(max) {
   return { top: Math.ceil(max / step) * step, step: step };
 }
 function fmtTickYen(v) {
+  if (amountsHidden()) return MASK_YEN;
   if (v >= 10000) {
     var s = String(Math.round(v / 1000) / 10).replace(/\.0$/, "");
     return "¥" + s + "万";
   }
   return "¥" + Math.round(v).toLocaleString("ja-JP");
 }
-function fmtTickUsd(v) { return "$" + Math.round(v).toLocaleString("en-US"); }
+function fmtTickUsd(v) {
+  if (amountsHidden()) return MASK_USD;
+  return "$" + Math.round(v).toLocaleString("en-US");
+}
 function dayBeforeStr(dateStr) {
   var d = new Date(dateStr + "T00:00:00");
   d.setDate(d.getDate() - 1);
@@ -1570,6 +1600,7 @@ function renderHoldings() {
 }
 
 function renderAll() {
+  renderHideAmtBtn();
   renderMode();
   renderHome();
   renderDividends();
@@ -2014,6 +2045,21 @@ $("useExtraToggle").addEventListener("change", function () {
   state.settings.useExtra = $("useExtraToggle").checked;
   saveSettings();
   renderAll();
+});
+
+/* ---------- 金額表示/非表示（v0.6.2） ---------- */
+function renderHideAmtBtn() {
+  var btn = $("hideAmtBtn");
+  if (!btn) return;
+  var hidden = amountsHidden();
+  btn.textContent = hidden ? "👀 金額を表示" : "🙈 金額を隠す";
+  btn.setAttribute("aria-pressed", hidden ? "true" : "false");
+}
+$("hideAmtBtn").addEventListener("click", function () {
+  state.settings.hideAmounts = !amountsHidden();
+  saveSettings();
+  renderAll(); /* ボタンの文言も含め、即時に全画面へ反映される */
+  toast(amountsHidden() ? "金額を隠しました" : "金額を表示しました");
 });
 
 /* ---------- CSV ---------- */
@@ -2481,7 +2527,7 @@ function renderDividends() {
     var lines = g.items.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).map(function (d) {
       return "<div class='div-line'><span class='ddate'>" + esc(d.date) + "</span><span>" + esc(d.name) + "</span><span class='damt'>" + money(num(d.amount), d.currency) + "</span></div>";
     }).join("");
-    det.innerHTML = "<summary>" + esc(g.year) + "年：" + (parts.length ? parts.join(" ＋ ") : "¥0") + "（" + g.items.length + "件）</summary>" + lines;
+    det.innerHTML = "<summary>" + esc(g.year) + "年：" + (parts.length ? parts.join(" ＋ ") : yen(0)) + "（" + g.items.length + "件）</summary>" + lines;
     area.appendChild(det);
   });
 }
@@ -2974,7 +3020,7 @@ function renderSimResult(res) {
   var fin = $("simKpiFinal");
   fin.textContent = yen(res.finalVal);
   fin.className = "kval pnl " + pnlClass(res.finalVal - res.totalSelf);
-  $("simKpiFinalSub").textContent = "終値 ¥" + (Math.round(res.finalPrice * 10) / 10).toLocaleString("ja-JP", { maximumFractionDigits: 1 }) + " ／ 配当なし " + yen(res.finalValND);
+  $("simKpiFinalSub").textContent = "終値 " + yenPrice(res.finalPrice) + " ／ 配当なし " + yen(res.finalValND);
   var prof = $("simKpiProfit");
   prof.textContent = yenSigned(res.profit);
   prof.className = "kval pnl " + pnlClass(res.profit);
