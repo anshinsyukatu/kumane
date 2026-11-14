@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#D84336" />
 <title>くまねー</title>
 <style>
-  /* くまねー v0.6.2
+  /* くまねー v0.6.3
      配色は家族ルック：背景は白、カードは「くまカラー」#f0dcbc、文字 #3a352d、アクセント #d84336。
      ダークモード対策（恒常ルール）：自分の背景を持つ要素は背景色と文字色を固定値でセット指定し、
      prefers-color-scheme: dark でも同じ値を再指定して反転させない。 */
@@ -306,7 +306,7 @@
     .fig .figcap{ color:#6B6151; }
   }
 
-  /* v0.4 円グラフ・ベストワースト・現在値更新（固定色ペアで指定） */
+  /* v0.4 円グラフ・ベストワースト（固定色ペアで指定） */
   .pie-block{ margin-top:6px; }
   .pie-flex{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
   .pie-svg{ flex:0 0 auto; }
@@ -324,7 +324,6 @@
   .bw-row:first-of-type{ border-top:0; }
   .bw-row .bw-name{ word-break:break-all; }
   .bw-row .bw-pct{ margin-left:auto; font-weight:800; white-space:nowrap; }
-  .fetch-note{ font-size:12.5px; color:#6B6151; margin-top:6px; }
   .hold .hbroker{ font-size:12px; color:#6B6151; }
   @media (prefers-color-scheme: dark){
     .pie-legend .pl-row{ border-top-color:#DECFA6; }
@@ -333,7 +332,6 @@
     .pie-total{ color:#6B6151; }
     .bw-col h3{ color:#3A352D; }
     .bw-row{ border-top-color:#DECFA6; }
-    .fetch-note{ color:#6B6151; }
     .hold .hbroker{ color:#6B6151; }
   }
 
@@ -411,7 +409,7 @@
 
   <header class="top">
     <h1>くまねー<span class="bear-c" role="img" aria-label="くまま"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.8" cy="5.4" r="2.7" fill="currentColor"/><circle cx="17.2" cy="5.4" r="2.7" fill="currentColor"/><path d="M12 20.8c-4.3 0-7-2.6-7-6.2C5 10.7 8.1 7.5 12 7.5s7 3.2 7 7.1c0 3.6-2.7 6.2-7 6.2Z" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><circle cx="9.4" cy="13.3" r="1.1" fill="currentColor"/><circle cx="14.6" cy="13.3" r="1.1" fill="currentColor"/><path d="M10.1 16.2c.6.5 1.2.8 1.9.8s1.3-.3 1.9-.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span></h1>
-    <span class="ver">v0.6.2</span>
+    <span class="ver">v0.6.3</span>
     <button type="button" class="hide-amt-btn" id="hideAmtBtn" aria-pressed="false">🙈 金額を隠す</button>
   </header>
 
@@ -442,11 +440,7 @@
     </div>
 
     <div class="card">
-      <div class="row-flex" style="justify-content:flex-end">
-        <button type="button" class="btn small" id="priceFetchBtn">現在値を更新</button>
-      </div>
-      <div class="fetch-note hidden" id="priceFetchNote"></div>
-      <div id="totalBlocks" class="mt8"></div>
+      <div id="totalBlocks"></div>
       <div class="trial-capital hidden" id="capitalLine"></div>
       <div id="periodArea"></div>
       <div class="sub mt8" id="snapNote"></div>
@@ -461,7 +455,7 @@
     <div class="card">
       <h2>資産の推移</h2>
       <div class="chart-box" id="chartBox"></div>
-      <div class="empty-note hidden" id="chartEmpty">現在値を更新すると、その日の総評価額が記録されて、ここにグラフが出ます。</div>
+      <div class="empty-note hidden" id="chartEmpty">保有を記録すると、その日の総評価額が記録されて、ここにグラフが出ます。</div>
     </div>
 
     <div class="card">
@@ -542,7 +536,7 @@
             </div>
           </div>
           <div class="full">
-            <div class="sub">現在値はここでは入力しません。追加した直後は買値と同じ値になり、ホームの「現在値を更新」かCSV取り込みで変わります。</div>
+            <div class="sub">現在値はここでは入力しません。追加した直後は買値と同じ値になり、CSV取り込みで変わります。</div>
           </div>
           <div class="full">
             <label for="fMemo">なぜ買ったか（一言メモ）</label>
@@ -805,7 +799,7 @@
     <div class="card">
       <h2>くまねーについて</h2>
       <p>買った値段と今の値段を記録して、含み損益や資産の推移を眺めるための、小さな記録アプリです。</p>
-      <p>・現在値は、ホームの「現在値を更新」ボタンでまとめて更新できます（銘柄コードのある日本株・米国株だけ。株価は外部サイト stooq の終値で、遅れて表示されることがあります）。投資信託・債券・現金は対象外で、CSV取り込みや買値のままになります。<br>
+      <p>・現在値は、証券会社のCSV取り込みで更新されます（取り込むまでは、追加したときの買値のままになります）。<br>
          ・ドル建てはドルで記録します。円への換算はしません。<br>
          ・楽天証券のCSV（保有・配当）を取り込めます。保有CSVからは、預り金・外貨預り金・楽天銀行の預金も「現金・預金」として取り込みます。取り込みで、手で書いたメモが消えることはありません。配当の取り込みで保有が変わることはありません。野村證券は準備中です。<br>
          ・保有には証券会社（現金・預金は金融機関）を付けられます。楽天のCSVから取り込むと自動で付きます。証券会社・金融機関は一覧から選ぶほか、欄の一番下の「＋ 新しく追加する」から、自分の使っている会社や銀行を書き加えることもできます（追加した名前は次回からも選べます）。<br>
@@ -813,13 +807,15 @@
          ・同じ名前・種類・通貨の保有を追加すると、買い増しとして合算されます（買値は平均取得単価になります）。<br>
          ・「本番」と「お試し」は記録が完全に分かれています。お試しは、元手を決めて「買ったつもり」で練習できます。<br>
          ・お試しには「持株会」タブがあります。持株会の積立（自己負担＋ポイント＋奨励金、ボーナス月の追加拠出、配当の再投資）を試算するシミュレーターで、別ページで公開していた「持株会シミュレーター」を取り込んだものです。条件はお試しの記録として端末に残り、本番の記録には混ざりません。株価・配当は過去の実績傾向に基づくモデルデータで計算します。<br>
-         ・現在値を更新すると、その日の総評価額が記録され、推移グラフと週・月・年の収支に使われます。<br>
+         ・保有を記録すると、その日の総評価額が記録され、推移グラフと週・月・年の収支に使われます。<br>
          ・記録はこの端末の中だけに保存されます。外部に送信されることはありません。機種変更やブラウザのデータ消去で消えることがあるので、CSVの書き出しがおすすめです。</p>
       <p><strong>このアプリは記録と試算のための道具です。投資の助言はしません。</strong></p>
     </div>
 
     <div class="card">
       <h2>更新履歴</h2>
+      <p><strong>v0.6.3</strong><br>
+         ・現在値の自動更新ボタンを削除しました。株価の取得元サイトの仕様が変わり、自動で取りに行けなくなったためです。現在値は、これまで通り証券会社のCSV取り込みで更新されます。</p>
       <p><strong>v0.6.2</strong><br>
          ・金額非表示ボタンを追加しました。画面上部の「金額を隠す」を押すと、評価額・元本・損益・配当などの金額がすべて「¥•••」「$•••」になります（割合（％）・件数・日付・銘柄名・数量はそのまま表示されます）。設定はこの端末に保存され、次に開いたときも残ります。</p>
       <p><strong>v0.6.1</strong><br>
@@ -949,17 +945,15 @@
 <script>
 "use strict";
 /* ============================================================
-   くまねー v0.6.2
+   くまねー v0.6.3
    - データは localStorage のみ（記録の外部送信なし）
    - 本番（real）とお試し（trial）は別データセットで完全分離
    - 通貨は円（JPY）／ドル（USD）。換算はせず、通貨ごとに完結させる
    - スナップショット：現在値を保存した日の総評価額を通貨別に日付つきで記録
-   - v0.4：ホームの「現在値を更新」だけが、銘柄コードのある日本株・米国株の
-     終値を stooq から取得する（送信するのは銘柄コードだけ。記録は送らない）。
-     直接取得できない環境向けに Worker プロキシを使う場合は PRICE_PROXY_URL に
-     プロキシのURLを入れる（空の間は直接取得。プロキシのコードは worker-price-proxy.js）
+   - 現在値はCSV取り込み（または追加したときの買値）で更新する。外部から自動で
+     取りに行く仕組みは、取得元サイトの仕様変更で取得できなくなったため
+     v0.6.3 で廃止した（外部への送信は一切しない）
    ============================================================ */
-var PRICE_PROXY_URL = "";
 
 var TYPES = {
   jp:      { label: "日本株",   color: "#D84336" },
@@ -1889,119 +1883,6 @@ $("formDeleteBtn").addEventListener("click", function () {
   toast("削除しました");
 });
 
-/* ---------- 現在値の一括更新（ホームのボタン） ---------- */
-/* 銘柄コードのある日本株・米国株だけ、外部サイト stooq の終値を取りに行く。
-   送るのは銘柄コードだけで、記録の内容は送らない。取れなかった分は件数で正直に出す。
-   投資信託・債券・現金と、コードの無い保有は対象外（CSV取り込み等で更新する）。
-   直接つながらない環境では PRICE_PROXY_URL（Workerプロキシ）経由に切り替えられる */
-function stooqSymbolFor(h) {
-  var code = String(h.code || "").trim();
-  if (!code) return null;
-  if (h.type === "jp") return code.toLowerCase() + ".jp";
-  if (h.type === "foreign") return code.toLowerCase() + ".us";
-  return null;
-}
-function priceUrl(symbol) {
-  if (PRICE_PROXY_URL) return PRICE_PROXY_URL + "?s=" + encodeURIComponent(symbol);
-  return "https://stooq.com/q/l/?s=" + encodeURIComponent(symbol) + "&f=c&h&e=csv";
-}
-/* 1件の取得は10秒で必ず打ち切る（v0.5.1）。以前は応答の頭が届いた時点で
-   タイマーを解除していたため、本文が止まると無限に待つことがあった。
-   戻り値：{ v: 終値（取れなければ null）, reason: "ok" | "timeout" | "network" | "nodata" } */
-var FETCH_TIMEOUT_MS = 10000;
-function fetchClose(symbol) {
-  var timedOut = false, httpFailed = false;
-  var work;
-  try {
-    var ctrl = null;
-    if (typeof AbortController !== "undefined" && typeof fetch !== "undefined") {
-      ctrl = new AbortController();
-      setTimeout(function () { timedOut = true; try { ctrl.abort(); } catch (e) {} }, FETCH_TIMEOUT_MS);
-      work = fetch(priceUrl(symbol), { signal: ctrl.signal });
-    } else {
-      work = fetch(priceUrl(symbol));
-    }
-  } catch (e) { return Promise.resolve({ v: null, reason: "network" }); }
-  work = Promise.resolve(work).then(function (res) {
-    if (!res || !res.ok) { httpFailed = true; return ""; }
-    return res.text();
-  }).then(function (text) {
-    if (httpFailed) return { v: null, reason: "network" };
-    if (typeof text !== "string") return { v: null, reason: "nodata" };
-    var lines = text.split(/\r?\n/);
-    for (var i = 1; i < lines.length; i++) {
-      var v = parseNumLoose(lines[i]);
-      if (v != null) return { v: v, reason: "ok" };
-    }
-    return { v: null, reason: "nodata" };
-  }).catch(function () {
-    return { v: null, reason: timedOut ? "timeout" : "network" };
-  });
-  /* abort が効かない環境でも、制限時間で必ず終わらせる */
-  var limit = new Promise(function (resolve) {
-    setTimeout(function () { resolve({ v: null, reason: "timeout" }); }, FETCH_TIMEOUT_MS);
-  });
-  return Promise.race([work, limit]);
-}
-$("priceFetchBtn").addEventListener("click", function () {
-  var btn = $("priceFetchBtn");
-  if (btn.disabled) return;
-  var targets = [], noCode = 0;
-  ds().holdings.forEach(function (h) {
-    var sym = stooqSymbolFor(h);
-    if (sym) targets.push({ h: h, symbol: sym });
-    else if (h.type === "jp" || h.type === "foreign") noCode++;
-  });
-  var note = $("priceFetchNote");
-  note.classList.remove("hidden");
-  if (!targets.length) {
-    note.textContent = "更新できる保有がありませんでした。銘柄コードのある日本株・米国株が対象です（投資信託・債券・現金は対象外）。";
-    return;
-  }
-  btn.disabled = true;
-  btn.textContent = "更新中…";
-  note.textContent = "株価を取りに行っています…（" + targets.length + "件中 0件 処理済み）";
-  var ok = 0, ngNet = 0, ngTimeout = 0, ngData = 0, done = 0;
-  var chain = Promise.resolve();
-  targets.forEach(function (t) {
-    chain = chain.then(function () {
-      return fetchClose(t.symbol).then(function (r) {
-        done++;
-        if (r && r.v != null && r.v > 0) { t.h.curPrice = r.v; ok++; }
-        else if (r && r.reason === "timeout") ngTimeout++;
-        else if (r && r.reason === "nodata") ngData++;
-        else ngNet++;
-        /* v0.5.1：進み具合をその都度出す（止まって見えないように） */
-        note.textContent = "株価を取りに行っています…（" + targets.length + "件中 " + done + "件 処理済み）";
-      });
-    });
-  });
-  chain.then(function () {
-    btn.disabled = false;
-    btn.textContent = "現在値を更新";
-    if (ok > 0) {
-      recordSnapshot();
-      saveDataset(state.mode);
-      renderAll();
-    }
-    var ng = ngNet + ngTimeout + ngData;
-    var msg = ok > 0
-      ? "現在値を更新しました（" + ok + "件）。"
-      : "現在値を更新できませんでした。";
-    if (ng > 0) {
-      msg += " 取れなかったものが " + ng + " 件あります。";
-      var parts = [];
-      if (ngNet > 0) parts.push("通信失敗 " + ngNet + "件");
-      if (ngTimeout > 0) parts.push("時間切れ（" + Math.round(FETCH_TIMEOUT_MS / 1000) + "秒） " + ngTimeout + "件");
-      if (ngData > 0) parts.push("終値が入っていなかった " + ngData + "件");
-      if (parts.length) msg += "（内訳：" + parts.join("・") + "）";
-    }
-    if (noCode > 0) msg += " コードのない株 " + noCode + " 件はそのままです。";
-    msg += " 投資信託・債券・現金は対象外です。株価は stooq の終値で、遅れて表示されることがあります。";
-    $("priceFetchNote").textContent = msg;
-    if (ok > 0) toast("現在値を更新しました（" + ok + "件）");
-  });
-});
 $("holdList").addEventListener("click", function (ev) {
   var btn = ev.target.closest("[data-edit]");
   if (btn) startEdit(btn.getAttribute("data-edit"));
