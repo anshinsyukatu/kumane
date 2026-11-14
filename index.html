@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#D84336" />
 <title>くまねー</title>
 <style>
-  /* くまねー v0.5
+  /* くまねー v0.5.1
      配色は家族ルック：背景は白、カードは「くまカラー」#f0dcbc、文字 #3a352d、アクセント #d84336。
      ダークモード対策（恒常ルール）：自分の背景を持つ要素は背景色と文字色を固定値でセット指定し、
      prefers-color-scheme: dark でも同じ値を再指定して反転させない。 */
@@ -195,6 +195,21 @@
       background:#FFFFFF; color:#3A352D; border-color:#C9B98F;
     }
   }
+  /* v0.5.1：セレクトは「タップして選べる」ことが見た目で分かるよう、右端に▽を常時出す。
+     背景色・文字色は従来どおり固定値ペア（ダークモードでも反転させない） */
+  select{
+    appearance:none;-webkit-appearance:none;
+    padding-right:30px;
+    background-color:#FFFFFF;color:#3A352D;
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236B6151' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 10px center;background-size:12px 8px;
+  }
+  @media (prefers-color-scheme: dark){
+    select{
+      background-color:#FFFFFF;color:#3A352D;border-color:#C9B98F;
+      background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236B6151' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+    }
+  }
   .btn{
     background:#FFFFFF;color:#3A352D;border:1.6px solid #C9B98F;border-radius:999px;
     padding:8px 16px;font-weight:700;font-size:14px;
@@ -336,7 +351,7 @@
 
   <header class="top">
     <h1>くまねー<span class="bear-c" role="img" aria-label="くまま"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6.8" cy="5.4" r="2.7" fill="currentColor"/><circle cx="17.2" cy="5.4" r="2.7" fill="currentColor"/><path d="M12 20.8c-4.3 0-7-2.6-7-6.2C5 10.7 8.1 7.5 12 7.5s7 3.2 7 7.1c0 3.6-2.7 6.2-7 6.2Z" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><circle cx="9.4" cy="13.3" r="1.1" fill="currentColor"/><circle cx="14.6" cy="13.3" r="1.1" fill="currentColor"/><path d="M10.1 16.2c.6.5 1.2.8 1.9.8s1.3-.3 1.9-.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span></h1>
-    <span class="ver">v0.5</span>
+    <span class="ver">v0.5.1</span>
   </header>
 
   <!-- モード帯：本番とお試しは別データ。色とバッジで常に区別する -->
@@ -438,6 +453,7 @@
           <div>
             <label for="fType">種類</label>
             <select id="fType"></select>
+            <div class="sub">タップして選べます（日本株・投資信託・外国株・債券・現金・預金）。いま表示されている種類のまま固定ではありません。</div>
           </div>
           <div>
             <label for="fQty" id="fQtyLabel">数量</label>
@@ -510,6 +526,7 @@
             <option value="rakuten-holdings">楽天証券の保有CSV</option>
             <option value="rakuten-dividends">楽天証券の配当CSV</option>
           </select>
+          <div class="sub mt8">タップして選べます。通常は「自動で判別する」のままで大丈夫です。</div>
         </div>
       </div>
       <div class="row-flex mt12">
@@ -570,6 +587,10 @@
 
     <div class="card">
       <h2>更新履歴</h2>
+      <p><strong>v0.5.1</strong><br>
+         ・現金・預金の損益率がおかしい桁数になることがある問題を直しました（現金・預金は買値・現在値とも1にそろえ、損益は常に0として計算します。すでに入っている記録も、開いたときに自動で直ります）。<br>
+         ・「現在値を更新」が終わらないことがある問題を直しました（1件ごとに10秒で打ち切り、進み具合と、取れなかった内訳を表示します）。<br>
+         ・種類・証券会社などの選択欄に「▽」と補足を付け、タップして選べることが分かるようにしました。</p>
       <p><strong>v0.5</strong><br>
          ・ホームの一番上に「全資産合計」を追加しました（通貨ごとに、評価額合計・元本合計・損益合計・件数。円とドルの換算・合算はしません）。<br>
          ・円グラフは、評価額の大きい順に上位10件までを銘柄ごとの色で表示し、11件目以降は「その他（N件）」にまとめました。凡例に色チップと構成比（％）を付けました。<br>
@@ -688,7 +709,7 @@
 <script>
 "use strict";
 /* ============================================================
-   くまねー v0.5
+   くまねー v0.5.1
    - データは localStorage のみ（記録の外部送信なし）
    - 本番（real）とお試し（trial）は別データセットで完全分離
    - 通貨は円（JPY）／ドル（USD）。換算はせず、通貨ごとに完結させる
@@ -734,6 +755,10 @@ function loadDataset(which) {
       if (typeof h.broker !== "string") h.broker = "";
       if (typeof h.code !== "string") h.code = "";
     });
+    /* v0.5.1 移行：現金・預金は「金額＝数量・単価1」が前提。買値・現在値が1でない
+       既存レコードがあると、評価額・損益率が桁外れになる（実機で確認）。
+       読み込み時に必ず1へ直し、入れ直さなくても表示が直るようにする */
+    d.holdings.forEach(function (h) { normalizeCashPrices(h); });
     d.snapshots.forEach(function (s) {
       if (typeof s.jpy !== "number") s.jpy = num(s.total);
       if ("total" in s) delete s.total;
@@ -843,28 +868,43 @@ function visibleHoldings() {
 /* ---------- 集計 ---------- */
 function holdingValue(h) { return num(h.curPrice) * num(h.qty); }
 function holdingCost(h) { return num(h.buyPrice) * num(h.qty); }
+/* 現金・預金は買値・現在値とも1に統一する（残高＝数量×1で、損益は常に0）。
+   数量＝金額のため、どちらかが1でないと評価額・元本が金額の二乗になったり、
+   損益率が桁外れになったりする。生成・取り込み・読み込みの全経路で通す */
+function normalizeCashPrices(h) {
+  if (h && h.type === "cash") { h.buyPrice = 1; h.curPrice = 1; }
+  return h;
+}
 function holdingPnlPct(h) {
+  if (h.type === "cash") return null; /* 現金・預金に損益率は無い（損益は常に0） */
   var c = holdingCost(h);
-  if (c <= 0) return null;
+  if (!(c > 0)) return null; /* 買値が0・未設定の保有では割り算しない */
   return (holdingValue(h) - c) / c * 100;
 }
 function totals(list) {
-  var value = 0, cost = 0;
-  list.forEach(function (h) { value += holdingValue(h); cost += holdingCost(h); });
-  return { value: value, cost: cost, pnl: value - cost, pnlPct: cost > 0 ? (value - cost) / cost * 100 : null };
+  var value = 0, cost = 0, rValue = 0, rCost = 0;
+  list.forEach(function (h) {
+    value += holdingValue(h); cost += holdingCost(h);
+    /* 損益率は買値が入っている保有だけで計算する。買値0の保有は「評価額だけ」が
+       混ざって率が桁外れになるため、率の分子・分母からは除く（金額の合計には含める） */
+    if (num(h.buyPrice) > 0) { rValue += holdingValue(h); rCost += holdingCost(h); }
+  });
+  return { value: value, cost: cost, pnl: value - cost, pnlPct: rCost > 0 ? (rValue - rCost) / rCost * 100 : null };
 }
 /* 通貨ごとに集計する（円とドルは絶対に合算しない） */
 var CURRENCIES = ["JPY", "USD"];
 function totalsByCurrency(list) {
-  var acc = { JPY: { value: 0, cost: 0, count: 0 }, USD: { value: 0, cost: 0, count: 0 } };
+  var acc = { JPY: { value: 0, cost: 0, count: 0, rValue: 0, rCost: 0 }, USD: { value: 0, cost: 0, count: 0, rValue: 0, rCost: 0 } };
   list.forEach(function (h) {
     var a = acc[curOf(h)];
     a.value += holdingValue(h); a.cost += holdingCost(h); a.count++;
+    /* 損益率は totals と同じく、買値が入っている保有だけで計算する */
+    if (num(h.buyPrice) > 0) { a.rValue += holdingValue(h); a.rCost += holdingCost(h); }
   });
   var out = {};
   CURRENCIES.forEach(function (k) {
     var a = acc[k];
-    out[k] = { value: a.value, cost: a.cost, count: a.count, pnl: a.value - a.cost, pnlPct: a.cost > 0 ? (a.value - a.cost) / a.cost * 100 : null };
+    out[k] = { value: a.value, cost: a.cost, count: a.count, pnl: a.value - a.cost, pnlPct: a.rCost > 0 ? (a.rValue - a.rCost) / a.rCost * 100 : null };
   });
   return out;
 }
@@ -1510,7 +1550,7 @@ $("holdForm").addEventListener("submit", function (ev) {
       currency: formCurrency,
       qty: num($("fQty").value),
       buyPrice: buy,
-      curPrice: prev ? num(prev.curPrice) : buy,
+      curPrice: type === "cash" ? 1 : (prev ? num(prev.curPrice) : buy),
       broker: brokerIn,
       code: codeIn,
       memo: memoIn,
@@ -1534,6 +1574,7 @@ $("holdForm").addEventListener("submit", function (ev) {
         ? Math.round(((num(ex.buyPrice) * oldQty + buy * addQty) / totalQty) * 100) / 100
         : buy;
       ex.qty = totalQty;
+      normalizeCashPrices(ex); /* 現金・預金の合算でも単価1を保つ */
       /* 現在値は合算では変えない。証券会社・コードが空なら、入力された方で補う */
       if (!ex.broker && brokerIn) ex.broker = brokerIn;
       if (!ex.code && codeIn) ex.code = codeIn;
@@ -1591,30 +1632,43 @@ function priceUrl(symbol) {
   if (PRICE_PROXY_URL) return PRICE_PROXY_URL + "?s=" + encodeURIComponent(symbol);
   return "https://stooq.com/q/l/?s=" + encodeURIComponent(symbol) + "&f=c&h&e=csv";
 }
+/* 1件の取得は10秒で必ず打ち切る（v0.5.1）。以前は応答の頭が届いた時点で
+   タイマーを解除していたため、本文が止まると無限に待つことがあった。
+   戻り値：{ v: 終値（取れなければ null）, reason: "ok" | "timeout" | "network" | "nodata" } */
+var FETCH_TIMEOUT_MS = 10000;
 function fetchClose(symbol) {
-  var ctrl = null, timer = null, p;
+  var timedOut = false, httpFailed = false;
+  var work;
   try {
+    var ctrl = null;
     if (typeof AbortController !== "undefined" && typeof fetch !== "undefined") {
       ctrl = new AbortController();
-      timer = setTimeout(function () { ctrl.abort(); }, 12000);
-      p = fetch(priceUrl(symbol), { signal: ctrl.signal });
+      setTimeout(function () { timedOut = true; try { ctrl.abort(); } catch (e) {} }, FETCH_TIMEOUT_MS);
+      work = fetch(priceUrl(symbol), { signal: ctrl.signal });
     } else {
-      p = fetch(priceUrl(symbol));
+      work = fetch(priceUrl(symbol));
     }
-  } catch (e) { return Promise.resolve(null); }
-  return p.then(function (res) {
-    if (timer) clearTimeout(timer);
-    if (!res || !res.ok) return null;
+  } catch (e) { return Promise.resolve({ v: null, reason: "network" }); }
+  work = Promise.resolve(work).then(function (res) {
+    if (!res || !res.ok) { httpFailed = true; return ""; }
     return res.text();
   }).then(function (text) {
-    if (typeof text !== "string") return null;
+    if (httpFailed) return { v: null, reason: "network" };
+    if (typeof text !== "string") return { v: null, reason: "nodata" };
     var lines = text.split(/\r?\n/);
     for (var i = 1; i < lines.length; i++) {
       var v = parseNumLoose(lines[i]);
-      if (v != null) return v;
+      if (v != null) return { v: v, reason: "ok" };
     }
-    return null;
-  }).catch(function () { if (timer) clearTimeout(timer); return null; });
+    return { v: null, reason: "nodata" };
+  }).catch(function () {
+    return { v: null, reason: timedOut ? "timeout" : "network" };
+  });
+  /* abort が効かない環境でも、制限時間で必ず終わらせる */
+  var limit = new Promise(function (resolve) {
+    setTimeout(function () { resolve({ v: null, reason: "timeout" }); }, FETCH_TIMEOUT_MS);
+  });
+  return Promise.race([work, limit]);
 }
 $("priceFetchBtn").addEventListener("click", function () {
   var btn = $("priceFetchBtn");
@@ -1633,13 +1687,19 @@ $("priceFetchBtn").addEventListener("click", function () {
   }
   btn.disabled = true;
   btn.textContent = "更新中…";
-  note.textContent = "株価を取りに行っています…";
-  var ok = 0, ng = 0;
+  note.textContent = "株価を取りに行っています…（" + targets.length + "件中 0件 処理済み）";
+  var ok = 0, ngNet = 0, ngTimeout = 0, ngData = 0, done = 0;
   var chain = Promise.resolve();
   targets.forEach(function (t) {
     chain = chain.then(function () {
-      return fetchClose(t.symbol).then(function (v) {
-        if (v != null && v > 0) { t.h.curPrice = v; ok++; } else ng++;
+      return fetchClose(t.symbol).then(function (r) {
+        done++;
+        if (r && r.v != null && r.v > 0) { t.h.curPrice = r.v; ok++; }
+        else if (r && r.reason === "timeout") ngTimeout++;
+        else if (r && r.reason === "nodata") ngData++;
+        else ngNet++;
+        /* v0.5.1：進み具合をその都度出す（止まって見えないように） */
+        note.textContent = "株価を取りに行っています…（" + targets.length + "件中 " + done + "件 処理済み）";
       });
     });
   });
@@ -1651,10 +1711,18 @@ $("priceFetchBtn").addEventListener("click", function () {
       saveDataset(state.mode);
       renderAll();
     }
+    var ng = ngNet + ngTimeout + ngData;
     var msg = ok > 0
       ? "現在値を更新しました（" + ok + "件）。"
       : "現在値を更新できませんでした。";
-    if (ng > 0) msg += " 取れなかったものが " + ng + " 件あります。";
+    if (ng > 0) {
+      msg += " 取れなかったものが " + ng + " 件あります。";
+      var parts = [];
+      if (ngNet > 0) parts.push("通信失敗 " + ngNet + "件");
+      if (ngTimeout > 0) parts.push("時間切れ（" + Math.round(FETCH_TIMEOUT_MS / 1000) + "秒） " + ngTimeout + "件");
+      if (ngData > 0) parts.push("終値が入っていなかった " + ngData + "件");
+      if (parts.length) msg += "（内訳：" + parts.join("・") + "）";
+    }
     if (noCode > 0) msg += " コードのない株 " + noCode + " 件はそのままです。";
     msg += " 投資信託・債券・現金は対象外です。株価は stooq の終値で、遅れて表示されることがあります。";
     $("priceFetchNote").textContent = msg;
@@ -1788,14 +1856,16 @@ $("csvFile").addEventListener("change", function () {
         if (!next[m]) return;
         if (kind === "meta" && r[2] === "capital") { next[m].capital = num(col("total", 10)); touched[m] = true; }
         else if (kind === "holding") {
-          next[m].holdings.push({
+          var nh = {
             id: uid() + idx, name: r[2] || "（無名）",
             type: TYPES[r[3]] ? r[3] : "jp",
             currency: col("currency", -1) === "USD" ? "USD" : "JPY",
             buyPrice: num(col("buy_price", 4)), qty: num(col("qty", 5)), curPrice: num(col("cur_price", 6)),
             memo: col("memo", 7) || "", yutai: col("yutai", 8) || "", yutaiMonth: col("yutai_month", 9) || "",
             broker: col("broker", -1) || "", code: col("code", -1) || ""
-          });
+          };
+          normalizeCashPrices(nh); /* v0.5.1：自前CSVでも現金・預金は単価1にそろえる */
+          next[m].holdings.push(nh);
           touched[m] = true;
         } else if (kind === "snapshot" && /^\d{4}-\d{2}-\d{2}$/.test(r[2] || "")) {
           var usdRaw = col("total_usd", -1);
@@ -2213,7 +2283,7 @@ function renderBrokerPreview() {
         "／評価額 " + money(num(r.qty) * num(r.curPrice), r.currency) + "</div>";
     list.appendChild(div);
   });
-  var note = "新規 " + nNew + "件／更新 " + nUpd + "件を取り込みます。更新しても、メモと優待メモは消えません。CSVに無い保有はそのまま残ります。";
+  var note = "新規 " + nNew + "件／更新 " + nUpd + "件を取り込みます。更新しても、メモと優待メモは消えません。CSVに無い保有はそのまま残ります。種類は各行の右の欄（▽）で変えられます。";
   if (pendingBroker.skippedCount) note += " 読み取れなかった行が " + pendingBroker.skippedCount + " 件ありました。";
   if (hasHiddenType) note += " 外国株・債券は設定オフのためホームには出ませんが、記録はされます。";
   $("brokerPreviewNote").textContent = note;
@@ -2236,6 +2306,8 @@ function applyBrokerHoldings(rows) {
   rows.forEach(function (r) {
     if (!r.include) return;
     if (!(num(r.buyPrice) > 0) && !(num(r.curPrice) > 0) && r.type !== "cash") { skippedNoPrice++; return; }
+    /* v0.5.1：現金・預金は取り込みでも単価1にそろえる（プレビューで種類を変えた行も含む） */
+    if (r.type === "cash") { r.buyPrice = 1; r.curPrice = 1; }
     var ex = findMergeTarget(r.name, r.type, r.currency, r.broker);
     if (ex) {
       ex.qty = r.qty;
@@ -2243,6 +2315,7 @@ function applyBrokerHoldings(rows) {
       ex.curPrice = r.curPrice;
       if (r.code) ex.code = r.code;
       if (r.broker) ex.broker = r.broker;
+      normalizeCashPrices(ex);
       updated++;
     } else {
       d.holdings.push({
